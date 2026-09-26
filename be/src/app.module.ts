@@ -12,6 +12,7 @@ import { ClientsModule } from './clients/clients.module';
 import { PostsModule } from './posts/posts.module';
 import { CommentsModule } from './comments/comments.module';
 import { AuditLogsModule } from './audit-logs/audit-logs.module';
+import { SchedulerModule } from './scheduler/scheduler.module';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { AuditLogsModule } from './audit-logs/audit-logs.module';
     PostsModule,
     CommentsModule,
     AuditLogsModule,
+    SchedulerModule,
   ],
   providers: [
     {
