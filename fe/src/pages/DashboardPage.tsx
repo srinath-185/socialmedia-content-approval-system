@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { postsApi, clientsApi } from '../api';
-import { Post, Client, Platform, Role } from '../types';
+import { Post, Client, Platform, PostStatus, Role } from '../types';
 import { useAuth } from '../hooks/useAuth';
 import { KanbanBoard } from '../components/posts/KanbanBoard';
 import { LoadingSpinner } from '../components/common/LoadingSpinner';
@@ -24,6 +24,7 @@ export const DashboardPage: React.FC = () => {
   const [clients, setClients] = useState<Client[]>([]);
   const [selectedClient, setSelectedClient] = useState<string>('');
   const [selectedPlatform, setSelectedPlatform] = useState<string>('');
+  const [selectedStatus, setSelectedStatus] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
@@ -70,8 +71,9 @@ export const DashboardPage: React.FC = () => {
     fetchPosts();
   }, [fetchPosts]);
 
-  // Client-side text filter by caption or creator name
+  // Client-side text and status filter
   const filteredPosts = posts.filter((p) => {
+    if (selectedStatus && p.status !== selectedStatus) return false;
     if (!searchQuery.trim()) return true;
     const q = searchQuery.toLowerCase();
     const captionMatch = p.caption.toLowerCase().includes(q);
@@ -116,53 +118,70 @@ export const DashboardPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Filter Toolbar */}
-      <div className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-2xs flex flex-wrap items-center justify-between gap-4">
-        <div className="flex flex-wrap items-center gap-3 flex-1 min-w-[280px]">
-          {/* Search Input */}
-          <div className="relative min-w-[200px] flex-1 max-w-xs">
-            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-3" />
+      {/* Filter Toolbar matching image.png */}
+      <div className="bg-white rounded-2xl p-3.5 border border-slate-200/80 shadow-xs flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-2.5 flex-1 min-w-[280px]">
+          {/* Search Input (Pill) */}
+          <div className="relative min-w-[180px] flex-1 max-w-xs">
+            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3.5 top-2.5" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search posts or creators..."
-              className="w-full pl-9 pr-3 py-1.5 rounded-xl border border-slate-200 text-xs text-slate-800 placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-indigo-600 focus:border-transparent transition"
+              className="w-full pl-9 pr-4 py-1.5 rounded-full border border-slate-300 text-xs text-slate-800 placeholder-slate-400 focus:outline-hidden focus:border-blue-600 focus:ring-1 focus:ring-blue-600 transition bg-white"
             />
           </div>
 
-          {/* Client Filter Dropdown */}
+          {/* Platform Filter Dropdown (Type) */}
           <Dropdown
-            label="Client"
-            value={selectedClient}
-            onChange={setSelectedClient}
-            options={[
-              { value: '', label: 'All Clients' },
-              ...clients.map((c) => ({ value: c._id, label: c.brandName })),
-            ]}
-          />
-
-          {/* Platform Filter Dropdown */}
-          <Dropdown
-            label="Platform"
+            label="Type"
             value={selectedPlatform}
             onChange={setSelectedPlatform}
             options={[
-              { value: '', label: 'All Platforms' },
+              { value: '', label: 'Any' },
               ...Object.values(Platform).map((plat) => ({ value: plat, label: plat })),
             ]}
           />
 
-          {(selectedClient || selectedPlatform || searchQuery) && (
+          {/* Client Filter Dropdown (Category) */}
+          <Dropdown
+            label="Category"
+            value={selectedClient}
+            onChange={setSelectedClient}
+            options={[
+              { value: '', label: 'Any' },
+              ...clients.map((c) => ({ value: c._id, label: c.brandName })),
+            ]}
+          />
+
+          {/* Status Filter Dropdown */}
+          <Dropdown
+            label="Status"
+            value={selectedStatus}
+            onChange={setSelectedStatus}
+            options={[
+              { value: '', label: 'Any' },
+              { value: PostStatus.DRAFT, label: 'Draft' },
+              { value: PostStatus.IN_REVIEW, label: 'In Review' },
+              { value: PostStatus.APPROVED, label: 'Approved' },
+              { value: PostStatus.CHANGES_REQUESTED, label: 'Changes Requested' },
+              { value: PostStatus.SCHEDULED, label: 'Scheduled' },
+              { value: PostStatus.PUBLISHED, label: 'Published' },
+            ]}
+          />
+
+          {(selectedClient || selectedPlatform || selectedStatus || searchQuery) && (
             <button
               onClick={() => {
                 setSelectedClient('');
                 setSelectedPlatform('');
+                setSelectedStatus('');
                 setSearchQuery('');
               }}
-              className="text-xs text-indigo-600 hover:text-indigo-800 font-semibold px-2 py-1"
+              className="text-xs text-blue-600 hover:text-blue-800 font-semibold px-2.5 py-1 rounded-full hover:bg-blue-50 transition cursor-pointer"
             >
-              Reset Filters
+              Reset
             </button>
           )}
         </div>
