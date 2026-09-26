@@ -63,23 +63,23 @@ export const LoginPage: React.FC = () => {
 
   return (
     <div className="h-screen max-h-screen w-full flex bg-zinc-50/70 antialiased font-sans overflow-hidden">
-      {/* Left Column: Compact Sign-In Form (Reduced Width, Zero Scroll) */}
-      <div className="w-full lg:w-[460px] xl:w-[480px] 2xl:w-[520px] shrink-0 h-full flex flex-col justify-center items-center p-6 sm:p-8 lg:p-10 overflow-hidden bg-white/60 border-r border-zinc-200/60">
-        <div className="w-full max-w-[390px] my-auto">
+      {/* Left Column: Compact Sign-In Form (Guaranteed Zero Scroll) */}
+      <div className="w-full lg:w-[440px] xl:w-[470px] shrink-0 h-full flex flex-col justify-center items-center p-6 sm:p-8 lg:p-10 overflow-hidden bg-white/60 border-r border-zinc-200/60">
+        <div className="w-full max-w-[380px] my-auto">
           {/* Mobile Brand Header */}
-          <div className="lg:hidden text-center mb-5">
-            <div className="w-11 h-11 rounded-2xl bg-black flex items-center justify-center text-white mx-auto shadow-md mb-2">
+          <div className="lg:hidden text-center mb-4">
+            <div className="w-10 h-10 rounded-2xl bg-black flex items-center justify-center text-white mx-auto shadow-md mb-1.5">
               <Layers className="w-5 h-5" />
             </div>
-            <h1 className="text-lg font-bold text-black tracking-tight">Conceps Media</h1>
+            <h1 className="text-base font-bold text-black tracking-tight">Conceps Media</h1>
             <p className="text-xs text-zinc-500">Content Approval System</p>
           </div>
 
           {/* Form Card */}
           <div className="bg-white rounded-3xl shadow-xl shadow-zinc-200/50 border border-zinc-200/80 p-6 sm:p-7">
-            <div className="mb-5">
-              <div className="hidden lg:flex items-center gap-2 mb-2.5">
-                <div className="w-8 h-8 rounded-xl bg-black flex items-center justify-center text-white shadow-xs">
+            <div className="mb-4">
+              <div className="hidden lg:flex items-center gap-2 mb-2">
+                <div className="w-7 h-7 rounded-xl bg-black flex items-center justify-center text-white shadow-xs">
                   <Layers className="w-4 h-4 text-white" />
                 </div>
                 <div>
@@ -91,15 +91,15 @@ export const LoginPage: React.FC = () => {
                   </span>
                 </div>
               </div>
-              <h2 className="text-xl sm:text-2xl font-bold text-black tracking-tight">
+              <h2 className="text-xl font-bold text-black tracking-tight">
                 Sign in to your account
               </h2>
-              <p className="text-xs text-zinc-500 mt-1">
+              <p className="text-xs text-zinc-500 mt-0.5">
                 Enter your credentials to manage campaigns and approvals
               </p>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-3.5">
+            <form onSubmit={handleSubmit} className="space-y-3">
               <div>
                 <label className="block text-[11px] font-semibold text-zinc-700 uppercase tracking-wider mb-1">
                   Email Address
@@ -163,7 +163,7 @@ export const LoginPage: React.FC = () => {
             </form>
 
             {/* Quick Demo Access Pills */}
-            <div className="mt-4 pt-4 border-t border-zinc-100">
+            <div className="mt-4 pt-3.5 border-t border-zinc-100">
               <div className="flex items-center justify-between text-[11px] font-semibold text-zinc-500 mb-2">
                 <span className="flex items-center gap-1.5">
                   <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
@@ -209,71 +209,71 @@ export const LoginPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Right Column: Wide Enterprise Hero Banner (Expanded Width) */}
-      <div className="hidden lg:flex flex-1 bg-gradient-to-br from-black via-zinc-950 to-neutral-950 text-white relative flex-col justify-between p-10 xl:p-14 2xl:p-16 overflow-hidden h-full">
+      {/* Right Column: Wide Enterprise Hero Banner (Proportional Font Size & Guaranteed 100% Fit) */}
+      <div className="hidden lg:flex flex-1 bg-gradient-to-br from-black via-zinc-950 to-neutral-950 text-white relative flex-col justify-between p-8 xl:p-10 2xl:p-12 overflow-hidden h-full">
         {/* Subtle Ambient Glows */}
-        <div className="absolute top-0 right-0 -mr-20 -mt-20 w-[500px] h-[500px] bg-zinc-700/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-[500px] h-[500px] bg-zinc-800/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute top-0 right-0 -mr-20 -mt-20 w-[450px] h-[450px] bg-zinc-700/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-[450px] h-[450px] bg-zinc-800/10 rounded-full blur-3xl pointer-events-none" />
 
         {/* Brand Header */}
         <div className="relative z-10 shrink-0">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-10 h-10 rounded-xl bg-zinc-900 border border-zinc-700/80 flex items-center justify-center text-white shadow-md">
-              <Layers className="w-5 h-5 text-white" />
+          <div className="flex items-center gap-2.5 mb-2">
+            <div className="w-8 h-8 rounded-lg bg-zinc-900 border border-zinc-700/80 flex items-center justify-center text-white shadow-md">
+              <Layers className="w-4 h-4 text-white" />
             </div>
             <div>
-              <span className="text-base font-bold tracking-tight text-white block leading-none">
+              <span className="text-sm font-bold tracking-tight text-white block leading-none">
                 Conceps Media
               </span>
-              <span className="block text-[10px] uppercase font-semibold tracking-wider text-zinc-400 mt-0.5">
+              <span className="block text-[9px] uppercase font-semibold tracking-wider text-zinc-400 mt-0.5">
                 Workflow Portal
               </span>
             </div>
           </div>
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-zinc-900/90 border border-zinc-700/60 text-xs font-medium text-zinc-300">
-            <Sparkles className="w-3.5 h-3.5 text-zinc-300" />
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-zinc-900/90 border border-zinc-700/60 text-[11px] font-medium text-zinc-300">
+            <Sparkles className="w-3 h-3 text-zinc-300" />
             <span>Enterprise Content Governance</span>
           </div>
         </div>
 
-        {/* Hero Value Proposition (Expanded Width) */}
-        <div className="relative z-10 my-auto py-4 space-y-6 max-w-2xl w-full">
-          <div className="space-y-3">
-            <h1 className="text-3xl xl:text-4xl 2xl:text-5xl font-extrabold tracking-tight text-white leading-tight">
+        {/* Hero Value Proposition (Proportional Font & Complete Texts Visible) */}
+        <div className="relative z-10 my-auto py-2 space-y-4 max-w-2xl w-full">
+          <div className="space-y-2">
+            <h1 className="text-2xl xl:text-3xl font-bold tracking-tight text-white leading-snug">
               Deterministic approvals for multi-brand campaigns.
             </h1>
-            <p className="text-sm xl:text-base text-zinc-400 leading-relaxed font-normal max-w-xl">
+            <p className="text-xs xl:text-sm text-zinc-400 leading-relaxed font-normal max-w-xl">
               Manage drafting, assigned reviewer sign-offs, 2-hour scheduling conflict checks, and automated publishing across X, Instagram, LinkedIn, and Facebook.
             </p>
           </div>
 
-          {/* Key Feature Pillars (Expansive Cards) */}
-          <div className="space-y-3.5 pt-1 w-full">
-            <div className="flex items-start gap-3.5 p-4 rounded-2xl bg-zinc-900/80 border border-zinc-800/90 backdrop-blur-xs transition hover:border-zinc-700">
-              <CheckCircle2 className="w-5 h-5 text-zinc-300 shrink-0 mt-0.5" />
+          {/* Key Feature Pillars (Proportional & Complete) */}
+          <div className="space-y-2.5 pt-1 w-full">
+            <div className="flex items-start gap-3 p-3 xl:p-3.5 rounded-xl bg-zinc-900/80 border border-zinc-800/80 backdrop-blur-xs transition hover:border-zinc-700">
+              <CheckCircle2 className="w-4 h-4 text-zinc-300 shrink-0 mt-0.5" />
               <div>
-                <h2 className="text-sm font-semibold text-white">Strict Multi-Tier RBAC</h2>
-                <p className="text-xs text-zinc-400 leading-normal mt-0.5">
+                <h2 className="text-xs xl:text-sm font-semibold text-white">Strict Multi-Tier RBAC</h2>
+                <p className="text-[11px] xl:text-xs text-zinc-400 leading-normal mt-0.5">
                   Admin governance, creator draft permissions, and reviewer client scoping with zero self-approval.
                 </p>
               </div>
             </div>
 
-            <div className="flex items-start gap-3.5 p-4 rounded-2xl bg-zinc-900/80 border border-zinc-800/90 backdrop-blur-xs transition hover:border-zinc-700">
-              <Clock className="w-5 h-5 text-zinc-300 shrink-0 mt-0.5" />
+            <div className="flex items-start gap-3 p-3 xl:p-3.5 rounded-xl bg-zinc-900/80 border border-zinc-800/80 backdrop-blur-xs transition hover:border-zinc-700">
+              <Clock className="w-4 h-4 text-zinc-300 shrink-0 mt-0.5" />
               <div>
-                <h2 className="text-sm font-semibold text-white">Conflict-Free Scheduling</h2>
-                <p className="text-xs text-zinc-400 leading-normal mt-0.5">
+                <h2 className="text-xs xl:text-sm font-semibold text-white">Conflict-Free Scheduling</h2>
+                <p className="text-[11px] xl:text-xs text-zinc-400 leading-normal mt-0.5">
                   2-hour collision window prevention per brand and automated cron publishing.
                 </p>
               </div>
             </div>
 
-            <div className="flex items-start gap-3.5 p-4 rounded-2xl bg-zinc-900/80 border border-zinc-800/90 backdrop-blur-xs transition hover:border-zinc-700">
-              <ShieldCheck className="w-5 h-5 text-zinc-300 shrink-0 mt-0.5" />
+            <div className="flex items-start gap-3 p-3 xl:p-3.5 rounded-xl bg-zinc-900/80 border border-zinc-800/80 backdrop-blur-xs transition hover:border-zinc-700">
+              <ShieldCheck className="w-4 h-4 text-zinc-300 shrink-0 mt-0.5" />
               <div>
-                <h2 className="text-sm font-semibold text-white">Immutable Audit Trail</h2>
-                <p className="text-xs text-zinc-400 leading-normal mt-0.5">
+                <h2 className="text-xs xl:text-sm font-semibold text-white">Immutable Audit Trail</h2>
+                <p className="text-[11px] xl:text-xs text-zinc-400 leading-normal mt-0.5">
                   Every state mutation stamped with actor ID, IP address, user-agent, and version tracking.
                 </p>
               </div>
@@ -282,7 +282,7 @@ export const LoginPage: React.FC = () => {
         </div>
 
         {/* Footer Meta */}
-        <div className="relative z-10 pt-4 border-t border-zinc-800/70 flex items-center justify-between text-xs text-zinc-400 shrink-0">
+        <div className="relative z-10 pt-3 border-t border-zinc-800/70 flex items-center justify-between text-[11px] text-zinc-400 shrink-0">
           <span>Conceps Media v1.0</span>
           <span>SOC-2 Ready • 256-bit JWT</span>
         </div>
