@@ -1,10 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { Client, Platform, Post } from '../../types';
 import { CAPTION_LIMITS, PLATFORM_CONFIGS } from '../../utils/platformLimits';
-import { toLocalDatetimeInput } from '../../utils/dateUtils';
 import { AlertTriangle, Clock, Calendar, Check, Save } from 'lucide-react';
 import { Dropdown } from '../common/Dropdown';
-import { DateTimePicker } from '../common/DateTimePicker';
+import { DatePicker } from '../common/DatePicker';
+import { TimePicker } from '../common/TimePicker';
+import {
+  getISTParts,
+  combineDateAndTimeIST,
+  formatToIST,
+} from '../../utils/dateUtils';
 
 interface PostEditorProps {
   initialPost?: Post;
@@ -40,9 +45,25 @@ export const PostEditor: React.FC<PostEditorProps> = ({
     initialPost?.platform || Platform.INSTAGRAM,
   );
   const [caption, setCaption] = useState<string>(initialPost?.caption || '');
-  const [scheduledAtInput, setScheduledAtInput] = useState<string>(
-    initialPost?.scheduledAt || '',
+
+  // Separated Date (YYYY-MM-DD) and Time (HH:mm) in IST
+  const initialParts = initialPost?.scheduledAt ? getISTParts(initialPost.scheduledAt) : null;
+  const [scheduledDate, setScheduledDate] = useState<string | undefined>(
+    initialParts?.dateStr || undefined,
   );
+  const [scheduledTime, setScheduledTime] = useState<string | undefined>(
+    initialParts?.timeStr || undefined,
+  );
+
+  useEffect(() => {
+    if (initialPost?.scheduledAt) {
+      const parts = getISTParts(initialPost.scheduledAt);
+      if (parts) {
+        setScheduledDate(parts.dateStr);
+        setScheduledTime(parts.timeStr);
+      }
+    }
+  }, [initialPost?.scheduledAt]);
 
   useEffect(() => {
     if (clients.length > 0 && !selectedClient) {
@@ -85,9 +106,34 @@ export const PostEditor: React.FC<PostEditorProps> = ({
     onClientChange?.(val);
   };
 
-  const handleDateInput = (isoDate?: string) => {
-    setScheduledAtInput(isoDate || '');
-    onDateChange?.(isoDate);
+  const handleDateSelect = (dateStr?: string) => {
+    setScheduledDate(dateStr);
+    const effectiveTime = dateStr ? (scheduledTime || '09:00') : undefined;
+    if (dateStr && !scheduledTime) {
+      setScheduledTime('09:00');
+    }
+    const combinedISO = combineDateAndTimeIST(dateStr, effectiveTime);
+    onDateChange?.(combinedISO);
+  };
+
+  const handleTimeSelect = (timeStr?: string) => {
+    setScheduledTime(timeStr);
+    let effectiveDate = scheduledDate;
+    if (timeStr && !effectiveDate) {
+      const today = new Date();
+      effectiveDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(
+        today.getDate(),
+      ).padStart(2, '0')}`;
+      setScheduledDate(effectiveDate);
+    }
+    const combinedISO = combineDateAndTimeIST(effectiveDate, timeStr);
+    onDateChange?.(combinedISO);
+  };
+
+  const handleClearSchedule = () => {
+    setScheduledDate(undefined);
+    setScheduledTime(undefined);
+    onDateChange?.(undefined);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -95,8 +141,8 @@ export const PostEditor: React.FC<PostEditorProps> = ({
     if (isOverLimit) return;
 
     let isoDate: string | undefined = undefined;
-    if (scheduledAtInput) {
-      isoDate = new Date(scheduledAtInput).toISOString();
+    if (scheduledDate) {
+      isoDate = combineDateAndTimeIST(scheduledDate, scheduledTime);
     }
 
     await onSubmit({
@@ -200,27 +246,75 @@ export const PostEditor: React.FC<PostEditorProps> = ({
         )}
       </div>
 
-      {/* Schedule At Date Picker (UTC stored, displayed in IST) */}
-      <div>
-        <div className="flex items-center justify-between mb-1.5">
+      {/* Target Publication Schedule - Separated Date & Time */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
           <label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
             <Calendar className="w-3.5 h-3.5 text-indigo-600" />
-            <span>Target Scheduled Time (IST)</span>
+            <span>Target Publication Schedule (IST)</span>
           </label>
-          <span className="text-[11px] text-slate-400">Optional for Drafts</span>
+          {scheduledDate ? (
+            <button
+              type="button"
+              onClick={handleClearSchedule}
+              className="text-[11px] font-semibold text-rose-500 hover:text-rose-600 hover:underline cursor-pointer"
+            >
+              Clear Schedule
+            </button>
+          ) : (
+            <span className="text-[11px] text-slate-400">Optional for Drafts</span>
+          )}
         </div>
 
-        <div className="relative">
-          <DateTimePicker
-            value={scheduledAtInput}
-            onChange={handleDateInput}
-            placement="top"
-            placeholder="Select target publication date and time (IST)..."
-          />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {/* Target Date */}
+          <div>
+            <span className="block text-[11px] font-medium text-slate-500 mb-1">
+              Publication Date
+            </span>
+            <DatePicker
+              value={scheduledDate}
+              onChange={handleDateSelect}
+              placement="top"
+              placeholder="Select date (IST)..."
+            />
+          </div>
+
+          {/* Target Time */}
+          <div>
+            <span className="block text-[11px] font-medium text-slate-500 mb-1">
+              Publication Time (IST)
+            </span>
+            <TimePicker
+              value={scheduledTime}
+              onChange={handleTimeSelect}
+              placement="top"
+              placeholder="Select time (IST)..."
+            />
+          </div>
         </div>
-        <p className="text-[11px] text-slate-400 mt-1">
-          Times are converted to UTC for database storage and must be in the future.
-        </p>
+
+        {/* Schedule Summary Banner */}
+        {scheduledDate && scheduledTime ? (
+          <div className="mt-2 py-2 px-3 rounded-xl bg-indigo-50/60 border border-indigo-100 flex items-center justify-between text-xs text-indigo-900">
+            <div className="flex items-center gap-2">
+              <Check className="w-3.5 h-3.5 text-indigo-600" />
+              <span>
+                Scheduled for:{' '}
+                <strong>
+                  {formatToIST(combineDateAndTimeIST(scheduledDate, scheduledTime))}
+                </strong>
+              </span>
+            </div>
+            <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700">
+              IST Zone
+            </span>
+          </div>
+        ) : (
+          <p className="text-[11px] text-slate-400 mt-1">
+            Times are converted to UTC for database storage and must be in the future.
+          </p>
+        )}
       </div>
 
       {/* Submit Button */}
