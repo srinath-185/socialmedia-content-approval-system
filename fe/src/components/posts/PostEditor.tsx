@@ -214,6 +214,7 @@ export const PostEditor: React.FC<PostEditorProps> = ({
           <DateTimePicker
             value={scheduledAtInput}
             onChange={handleDateInput}
+            placement="top"
             placeholder="Select target publication date and time (IST)..."
           />
         </div>

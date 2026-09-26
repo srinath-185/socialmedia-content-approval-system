@@ -18,6 +18,7 @@ interface DateTimePickerProps {
   className?: string;
   variant?: 'input' | 'pill';
   label?: string;
+  placement?: 'top' | 'bottom' | 'auto';
 }
 
 const MONTH_NAMES = [
@@ -46,8 +47,12 @@ export const DateTimePicker: React.FC<DateTimePickerProps> = ({
   className = '',
   variant = 'input',
   label,
+  placement = 'top',
 }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [actualPlacement, setActualPlacement] = useState<'top' | 'bottom'>(
+    placement === 'bottom' ? 'bottom' : 'top',
+  );
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Parse current date or default to now
@@ -98,6 +103,30 @@ export const DateTimePicker: React.FC<DateTimePickerProps> = ({
       setSelectedDate(null);
     }
   }, [value]);
+
+  // Adjust placement based on prop or viewport space
+  useEffect(() => {
+    if (!isOpen) return;
+    if (placement === 'top') {
+      setActualPlacement('top');
+      return;
+    }
+    if (placement === 'bottom') {
+      setActualPlacement('bottom');
+      return;
+    }
+    // auto calculation
+    if (containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const spaceAbove = rect.top;
+      if (spaceAbove > 360 || spaceAbove > spaceBelow) {
+        setActualPlacement('top');
+      } else {
+        setActualPlacement('bottom');
+      }
+    }
+  }, [isOpen, placement]);
 
   // Click outside to close
   useEffect(() => {
@@ -291,7 +320,13 @@ export const DateTimePicker: React.FC<DateTimePickerProps> = ({
 
       {/* Floating Enterprise Calendar Card */}
       {isOpen && (
-        <div className="absolute left-0 mt-2 bg-white rounded-2xl shadow-2xl border border-slate-200/90 p-4 w-[330px] z-50 animate-in fade-in-0 zoom-in-95 duration-100">
+        <div
+          className={`absolute left-0 ${
+            actualPlacement === 'top'
+              ? 'bottom-full mb-2 origin-bottom'
+              : 'top-full mt-2 origin-top'
+          } bg-white rounded-2xl shadow-2xl border border-slate-200/90 p-4 w-[330px] z-50 animate-in fade-in-0 zoom-in-95 duration-100`}
+        >
           {/* Calendar Header with Navigation */}
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs font-bold text-slate-900 tracking-tight">
