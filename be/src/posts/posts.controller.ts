@@ -1,0 +1,84 @@
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
+import { PostsService } from './posts.service';
+import { CreatePostDto } from './dto/create-post.dto';
+import { UpdatePostDto } from './dto/update-post.dto';
+import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
+import { RolesGuard } from '../common/guards/roles.guard';
+import { Roles } from '../common/decorators/roles.decorator';
+import { CurrentUser, AuthenticatedUser } from '../common/decorators/current-user.decorator';
+import { Role } from '../common/enums/role.enum';
+
+@ApiTags('Social Posts')
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Controller('posts')
+export class PostsController {
+  constructor(private readonly postsService: PostsService) {}
+
+  @Post()
+  @Roles(Role.CREATOR)
+  @ApiOperation({ summary: 'Create a social media post in DRAFT status (CREATOR only)' })
+  @ApiResponse({ status: 201, description: 'Post created in DRAFT status' })
+  @ApiResponse({ status: 400, description: 'Caption exceeds platform limit or client not found' })
+  async create(
+    @Body() createPostDto: CreatePostDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.postsService.create(createPostDto, user.userId);
+  }
+
+  @Get()
+  @ApiOperation({ summary: 'List all posts accessible to the authenticated role' })
+  @ApiQuery({ name: 'client', required: false, description: 'Filter by client ID' })
+  @ApiQuery({ name: 'platform', required: false, description: 'Filter by platform' })
+  @ApiQuery({ name: 'status', required: false, description: 'Filter by post status' })
+  @ApiResponse({ status: 200, description: 'Array of posts' })
+  async findAll(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query('client') client?: string,
+    @Query('platform') platform?: string,
+    @Query('status') status?: string,
+  ) {
+    return this.postsService.findAll(user, { client, platform, status });
+  }
+
+  @Get(':id')
+  @ApiOperation({ summary: 'Get post details by ID' })
+  @ApiResponse({ status: 200, description: 'Post details' })
+  @ApiResponse({ status: 403, description: 'Forbidden: not authorized to view this post' })
+  @ApiResponse({ status: 404, description: 'Post not found' })
+  async findOne(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.postsService.findOne(id, user);
+  }
+
+  @Patch(':id')
+  @Roles(Role.CREATOR)
+  @ApiOperation({
+    summary:
+      'Update post caption/platform/schedule (CREATOR only, only in DRAFT or CHANGES_REQUESTED)',
+  })
+  @ApiResponse({ status: 200, description: 'Post successfully updated' })
+  @ApiResponse({ status: 400, description: 'Status not editable or caption exceeds limit' })
+  @ApiResponse({ status: 403, description: 'Forbidden: user did not create this post' })
+  @ApiResponse({ status: 409, description: 'Conflict: optimistic lock version mismatch' })
+  async update(
+    @Param('id') id: string,
+    @Body() updatePostDto: UpdatePostDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.postsService.update(id, updatePostDto, user);
+  }
+}
