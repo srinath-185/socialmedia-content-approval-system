@@ -9,7 +9,8 @@ import { CommentThread } from '../components/posts/CommentThread';
 import { AuditTimeline } from '../components/posts/AuditTimeline';
 import { LoadingSpinner } from '../components/common/LoadingSpinner';
 import { ErrorMessage } from '../components/common/ErrorMessage';
-import { formatToIST, toLocalDatetimeInput } from '../../src/utils/dateUtils';
+import { DateTimePicker } from '../components/common/DateTimePicker';
+import { formatToIST } from '../../src/utils/dateUtils';
 import { PLATFORM_CONFIGS } from '../../src/utils/platformLimits';
 import { getErrorMessage } from '../utils/errorMapper';
 import {
@@ -25,7 +26,7 @@ import {
   Sparkles,
   Lock,
 } from 'lucide-react';
-import toast from 'react-hot-toast';
+import { toast } from 'sonner';
 
 export const PostDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -63,7 +64,7 @@ export const PostDetailPage: React.FC = () => {
       setComments(commentsData);
       setAuditLogs(auditData);
       if (postData.scheduledAt) {
-        setScheduleDatetime(toLocalDatetimeInput(postData.scheduledAt));
+        setScheduleDatetime(postData.scheduledAt);
       }
     } catch (err: any) {
       const msg = err.response?.data?.message || 'Failed to load post details';
@@ -423,8 +424,8 @@ export const PostDetailPage: React.FC = () => {
       {showScheduleModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
           <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl border border-slate-100">
-            <div className="flex items-center gap-2 text-purple-900 font-bold text-base mb-2">
-              <Calendar className="w-5 h-5 text-purple-600" />
+            <div className="flex items-center gap-2 text-slate-900 font-bold text-base mb-2">
+              <Calendar className="w-5 h-5 text-[#4f39f6]" />
               <span>Schedule Post Publication</span>
             </div>
             <p className="text-xs text-slate-500 mb-4">
@@ -437,11 +438,10 @@ export const PostDetailPage: React.FC = () => {
               <label className="block text-xs font-semibold text-slate-700">
                 Scheduled Time (IST)
               </label>
-              <input
-                type="datetime-local"
+              <DateTimePicker
                 value={scheduleDatetime}
-                onChange={(e) => setScheduleDatetime(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-800 bg-white focus:outline-hidden focus:ring-2 focus:ring-purple-600 transition"
+                onChange={(iso) => setScheduleDatetime(iso || '')}
+                placeholder="Select publication date and time (IST)..."
               />
               <span className="text-[11px] text-slate-400 block">
                 Must be set to a future date and time.
@@ -463,7 +463,7 @@ export const PostDetailPage: React.FC = () => {
                   const isoDate = new Date(scheduleDatetime).toISOString();
                   handleTransition(PostStatus.SCHEDULED, { scheduledAt: isoDate });
                 }}
-                className="px-4 py-2 rounded-xl text-xs font-bold bg-purple-600 hover:bg-purple-700 text-white transition disabled:opacity-50"
+                className="px-4 py-2 rounded-xl text-xs font-bold bg-[#4f39f6] hover:bg-[#432ee0] text-white transition disabled:opacity-50 cursor-pointer"
               >
                 Confirm Schedule
               </button>

@@ -4,6 +4,7 @@ import { CAPTION_LIMITS, PLATFORM_CONFIGS } from '../../utils/platformLimits';
 import { toLocalDatetimeInput } from '../../utils/dateUtils';
 import { AlertTriangle, Clock, Calendar, Check, Save } from 'lucide-react';
 import { Dropdown } from '../common/Dropdown';
+import { DateTimePicker } from '../common/DateTimePicker';
 
 interface PostEditorProps {
   initialPost?: Post;
@@ -40,7 +41,7 @@ export const PostEditor: React.FC<PostEditorProps> = ({
   );
   const [caption, setCaption] = useState<string>(initialPost?.caption || '');
   const [scheduledAtInput, setScheduledAtInput] = useState<string>(
-    toLocalDatetimeInput(initialPost?.scheduledAt),
+    initialPost?.scheduledAt || '',
   );
 
   useEffect(() => {
@@ -84,15 +85,9 @@ export const PostEditor: React.FC<PostEditorProps> = ({
     onClientChange?.(val);
   };
 
-  const handleDateInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value;
-    setScheduledAtInput(val);
-    if (val) {
-      const iso = new Date(val).toISOString();
-      onDateChange?.(iso);
-    } else {
-      onDateChange?.(undefined);
-    }
+  const handleDateInput = (isoDate?: string) => {
+    setScheduledAtInput(isoDate || '');
+    onDateChange?.(isoDate);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -216,11 +211,10 @@ export const PostEditor: React.FC<PostEditorProps> = ({
         </div>
 
         <div className="relative">
-          <input
-            type="datetime-local"
+          <DateTimePicker
             value={scheduledAtInput}
             onChange={handleDateInput}
-            className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-700 bg-white focus:outline-hidden focus:ring-2 focus:ring-indigo-600 transition"
+            placeholder="Select target publication date and time (IST)..."
           />
         </div>
         <p className="text-[11px] text-slate-400 mt-1">

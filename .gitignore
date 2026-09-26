@@ -37,3 +37,6 @@ lerna-debug.log*
 coverage/
 */coverage/
 *.tsbuildinfo
+
+# Uploaded reference assets
+image.png

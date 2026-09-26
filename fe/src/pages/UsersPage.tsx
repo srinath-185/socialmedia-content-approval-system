@@ -14,7 +14,7 @@ import {
   Edit2,
   User as UserIcon,
 } from 'lucide-react';
-import toast from 'react-hot-toast';
+import { toast } from 'sonner';
 import { Dropdown } from '../components/common/Dropdown';
 
 export const UsersPage: React.FC = () => {

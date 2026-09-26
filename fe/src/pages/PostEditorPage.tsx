@@ -8,7 +8,7 @@ import { LoadingSpinner } from '../components/common/LoadingSpinner';
 import { ErrorMessage } from '../components/common/ErrorMessage';
 import { getErrorMessage } from '../utils/errorMapper';
 import { ArrowLeft, Sparkles } from 'lucide-react';
-import toast from 'react-hot-toast';
+import { toast } from 'sonner';
 
 export const PostEditorPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();

@@ -12,7 +12,7 @@ import {
   Shield,
   Layers,
 } from 'lucide-react';
-import toast from 'react-hot-toast';
+import { toast } from 'sonner';
 import { Dropdown } from '../components/common/Dropdown';
 
 export const ClientsPage: React.FC = () => {
