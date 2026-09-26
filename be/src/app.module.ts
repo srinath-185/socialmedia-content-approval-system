@@ -10,6 +10,8 @@ import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { ClientsModule } from './clients/clients.module';
 import { PostsModule } from './posts/posts.module';
+import { CommentsModule } from './comments/comments.module';
+import { AuditLogsModule } from './audit-logs/audit-logs.module';
 
 @Module({
   imports: [
@@ -29,6 +31,8 @@ import { PostsModule } from './posts/posts.module';
     UsersModule,
     ClientsModule,
     PostsModule,
+    CommentsModule,
+    AuditLogsModule,
   ],
   providers: [
     {
