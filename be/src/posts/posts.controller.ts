@@ -7,11 +7,14 @@ import {
   Param,
   Query,
   UseGuards,
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { PostsService } from './posts.service';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
+import { TransitionPostDto } from './dto/transition-post.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
@@ -80,5 +83,22 @@ export class PostsController {
     @CurrentUser() user: AuthenticatedUser,
   ) {
     return this.postsService.update(id, updatePostDto, user);
+  }
+
+  @Post(':id/transition')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Transition post status through the approval and scheduling workflow',
+  })
+  @ApiResponse({ status: 200, description: 'Status transition successful' })
+  @ApiResponse({ status: 400, description: 'Invalid transition, self-approval, or missing comment' })
+  @ApiResponse({ status: 403, description: 'Forbidden: reviewer not assigned or not creator' })
+  @ApiResponse({ status: 409, description: 'Optimistic lock conflict or scheduling conflict (2hr)' })
+  async transitionStatus(
+    @Param('id') id: string,
+    @Body() transitionDto: TransitionPostDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.postsService.transitionStatus(id, transitionDto, user);
   }
 }
