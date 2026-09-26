@@ -1,76 +1,80 @@
-import {
-  Injectable,
-  ConflictException,
-  NotFoundException,
-} from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Injectable } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
-import { User, UserDocument } from './schemas/user.schema';
+import { UsersRepository } from './repositories/users.repository';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import {
+  ConflictAppError,
+  NotFoundAppError,
+} from '../common/errors/app-error';
+import { ErrorCode } from '../common/errors/error-codes.enum';
 
 @Injectable()
 export class UsersService {
-  constructor(
-    @InjectModel(User.name) private userModel: Model<UserDocument>,
-  ) {}
+  constructor(private readonly usersRepository: UsersRepository) {}
 
   async create(createUserDto: CreateUserDto) {
     const normalizedEmail = createUserDto.email.toLowerCase();
-    const existing = await this.userModel.findOne({ email: normalizedEmail }).exec();
-    if (existing) {
-      throw new ConflictException(`User with email "${createUserDto.email}" already exists`);
+    const exists = await this.usersRepository.existsByEmail(normalizedEmail);
+    if (exists) {
+      throw new ConflictAppError(
+        ErrorCode.USER_ALREADY_EXISTS,
+        `User with email "${createUserDto.email}" already exists`,
+      );
     }
 
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(createUserDto.password, salt);
 
-    const newUser = new this.userModel({
+    const saved = await this.usersRepository.create({
       name: createUserDto.name,
       email: normalizedEmail,
       password: hashedPassword,
       role: createUserDto.role,
     });
 
-    const saved = await newUser.save();
     const { password: _, ...userWithoutPassword } = saved.toObject();
     return userWithoutPassword;
   }
 
   async findAll() {
-    return this.userModel
-      .find()
-      .select('-password')
-      .sort({ createdAt: -1 })
-      .exec();
+    return this.usersRepository.findAll();
   }
 
   async findOne(id: string) {
-    const user = await this.userModel.findById(id).select('-password').exec();
+    const user = await this.usersRepository.findById(id);
     if (!user) {
-      throw new NotFoundException(`User with ID "${id}" not found`);
+      throw new NotFoundAppError(
+        ErrorCode.USER_NOT_FOUND,
+        `User with ID "${id}" not found`,
+      );
     }
     return user;
   }
 
   async findByEmail(email: string) {
-    return this.userModel.findOne({ email: email.toLowerCase() }).exec();
+    return this.usersRepository.findByEmail(email);
   }
 
   async update(id: string, updateUserDto: UpdateUserDto) {
-    const user = await this.userModel.findById(id).exec();
+    const user = await this.usersRepository.findByIdWithPassword(id);
     if (!user) {
-      throw new NotFoundException(`User with ID "${id}" not found`);
+      throw new NotFoundAppError(
+        ErrorCode.USER_NOT_FOUND,
+        `User with ID "${id}" not found`,
+      );
     }
 
     if (updateUserDto.email && updateUserDto.email.toLowerCase() !== user.email) {
-      const emailExists = await this.userModel.findOne({
-        email: updateUserDto.email.toLowerCase(),
-        _id: { $ne: id },
-      }).exec();
+      const emailExists = await this.usersRepository.existsByEmail(
+        updateUserDto.email.toLowerCase(),
+        id,
+      );
       if (emailExists) {
-        throw new ConflictException(`Email "${updateUserDto.email}" is already in use`);
+        throw new ConflictAppError(
+          ErrorCode.USER_ALREADY_EXISTS,
+          `Email "${updateUserDto.email}" is already in use`,
+        );
       }
       user.email = updateUserDto.email.toLowerCase();
     }
@@ -94,9 +98,12 @@ export class UsersService {
   }
 
   async remove(id: string) {
-    const result = await this.userModel.findByIdAndDelete(id).exec();
+    const result = await this.usersRepository.delete(id);
     if (!result) {
-      throw new NotFoundException(`User with ID "${id}" not found`);
+      throw new NotFoundAppError(
+        ErrorCode.USER_NOT_FOUND,
+        `User with ID "${id}" not found`,
+      );
     }
     return { success: true, message: `User with ID "${id}" successfully deleted` };
   }

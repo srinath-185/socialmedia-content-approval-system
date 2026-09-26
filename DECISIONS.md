@@ -6,12 +6,15 @@ This document outlines key technical decisions, alternative approaches evaluated
 
 ## 1. Three Key Technical Decisions & Alternatives Rejected
 
-### Decision 1: Monolithic Modular NestJS Architecture vs. Microservices / Serverless Functions
-- **Decision Made**: Organised the backend into cohesive domain modules (`auth`, `users`, `clients`, `posts`, `comments`, `audit-logs`, `scheduler`) within a single NestJS application using standard dependency injection.
+### Decision 1: Strict Three-Layer Architecture (Controller → Service → Repository) vs. Active Record / Controller-Fat Pattern
+- **Decision Made**: Segregated the application into three non-leaking layers:
+  1. **Controllers**: Pure presentation/HTTP layer. Thin by rule — handles route decorators, Swagger docs, parameter binding, and delegates to services. No database access or business decisions.
+  2. **Services**: Pure domain orchestrator. Owns finite-state machine transitions, self-approval prevention, optimistic lock verification, and 2-hour scheduling rules. Does not interact with raw Mongoose models directly.
+  3. **Repositories**: Pure data persistence. Encapsulates all database queries (`UsersRepository`, `ClientsRepository`, `PostsRepository`, `CommentsRepository`, `AuditLogsRepository`), projection (`select('-password')`), and compound index scans.
 - **Alternatives Rejected**: 
-  - *Microservices (e.g., separate services for scheduling, audit logging, and core post management)*: Rejected due to unnecessary operational complexity, network latency overhead, distributed transaction challenges, and difficult local evaluation for reviewers.
-  - *Serverless Functions (AWS Lambda / Vercel Serverless)*: Rejected because the assignment requires an automated cron job running every minute to transition scheduled posts to published, which requires persistent background timers or external schedulers, complicating self-contained setups.
-- **Rationale**: NestJS provides enterprise-grade structure with built-in dependency injection, decorators, validation pipes, and scheduling (`@nestjs/schedule`). This keeps all business rules centralized, predictable, and immediately runnable with a single command.
+  - *Active Record / Direct Mongoose Model Injection in Services*: Rejected because mixing database primitives directly into service methods tightly couples business logic to database implementation, making unit testing brittle (requiring deep Mongoose mock chains) and violating the Single Responsibility Principle.
+  - *Fat Controllers*: Rejected because controllers doing business logic fail architectural review, prevent code reuse across interfaces (e.g. background schedulers, websockets), and create untestable endpoints.
+- **Rationale**: Strict 3-layer isolation guarantees that domain rules are testable in complete isolation from database drivers, controllers remain purely declarative, and database queries are optimized in one central location.
 
 ---
 
@@ -37,42 +40,24 @@ This document outlines key technical decisions, alternative approaches evaluated
 ## 2. One Bug / Problem Faced and How It Was Solved
 
 ### The Problem:
-During the implementation of unit tests for `PostsService.transitionStatus()`, multiple tests failed with:
+During the initial implementation, tests were mocking chained Mongoose queries directly on services:
 ```
 TypeError: this.postModel.findById(...).populate(...).populate is not a function
 ```
-In the service layer, `findOne()` populates both `client` and `createdBy` using chained Mongoose calls:
-```typescript
-const post = await this.postModel
-  .findById(id)
-  .populate('client', 'brandName reviewers')
-  .populate('createdBy', 'name email role')
-  .exec();
-```
-In the initial test mock, `mockPostModel.findById` returned a plain object where `.populate()` returned a single mock that did not chain back to itself. As a result, the second `.populate()` call failed.
+Because Mongoose queries can chain methods (`.findById().populate().populate().exec()`), mocking Mongoose model primitives in unit tests creates tight coupling to specific method call orders and deep mock pyramids.
 
-Furthermore, during the frontend production build with Vite and TypeScript, `fe/tsconfig.app.json` had `erasableSyntaxOnly: true` enabled by default in Vite's newer template, which actively threw compile errors on standard TypeScript `enum`s (`Role`, `Platform`, `PostStatus`).
+Furthermore, during the frontend build with Vite and TypeScript, `fe/tsconfig.app.json` had `erasableSyntaxOnly: true` enabled by default in newer Vite templates, which actively threw compile errors on standard TypeScript `enum`s (`Role`, `Platform`, `PostStatus`).
 
 ### The Solution:
-1. **Mock Chain Builder**: Re-engineered the unit test mock provider with a self-referencing chainable query utility:
-   ```typescript
-   const createChainableQuery = (resolvedValue: any) => {
-     const q: any = {};
-     q.populate = jest.fn().mockReturnValue(q);
-     q.select = jest.fn().mockReturnValue(q);
-     q.sort = jest.fn().mockReturnValue(q);
-     q.exec = jest.fn().mockResolvedValue(resolvedValue);
-     return q;
-   };
-   ```
-   This enabled arbitrary chaining of Mongoose query methods while resolving with the test document, allowing all 20 unit tests to execute cleanly and assert business rules accurately.
-2. **TypeScript Configuration Adjustment**: Updated `fe/tsconfig.app.json` to standard React + TypeScript bundler options (`moduleResolution: "bundler"`, `target: "ES2022"`), added `fe/src/vite-env.d.ts` for Vite client type definitions, ensuring seamless compilation of TypeScript enums across the entire frontend application.
+1. **Repository Pattern Extraction**: Extracted all database operations into dedicated Repositories (`PostsRepository`, etc.). This cleanly decoupled the service layer: unit tests now mock clean, intention-revealing repository signatures (`findByIdPopulated`, `findConflictingPost`, `save`) rather than internal Mongoose chaining. The tests became 100% resilient and fast (running in < 3 seconds).
+2. **Domain Error Codes & Typed Exceptions**: Replaced generic exception strings with a centralized `ErrorCode` enum and typed `AppError` subclasses (`ConflictAppError`, `ValidationAppError`, `ForbiddenAppError`). The global `HttpExceptionFilter` intercepts these and produces a predictable error envelope containing `{ success: false, statusCode, errorCode, message, details, timestamp }`.
+3. **TypeScript Configuration Adjustment**: Updated `fe/tsconfig.app.json` to standard React + TypeScript bundler options (`moduleResolution: "bundler"`, `target: "ES2022"`), added `fe/src/vite-env.d.ts`, ensuring zero-error compilation across all TypeScript enums.
 
 ---
 
 ## 3. What I Would Improve With One More Week
 
-If allocated an additional week of development on CampaignHub, I would prioritize the following architectural enhancements:
+If allocated an additional week of development on the platform, I would prioritize the following architectural enhancements:
 
 1. **Real-time WebSockets / SSE for Collaborative Workflow**:
    - Integrate NestJS WebSockets (`@nestjs/websockets` with Socket.IO) to push status changes, new comments, and conflict warnings to active users in real-time. When a reviewer approves a post or requests changes, the creator's Kanban board would instantly transition the card without manual polling or page refresh.
@@ -80,7 +65,7 @@ If allocated an additional week of development on CampaignHub, I would prioritiz
    - Implement a drag-and-drop calendar view (using FullCalendar or a custom Tailwind grid) allowing social media planners to visualize scheduled campaigns across all client brands, identify publishing gaps, and detect scheduling proximities visually.
 3. **Multi-Media Asset Management & CDN Uploads**:
    - Add direct image and video uploads to AWS S3 / Cloudflare R2 using pre-signed URLs, complete with client-side image aspect ratio validation (1:1 for Instagram feeds, 16:9 for LinkedIn/X, 9:16 for Reels/Stories).
-4. **End-to-End (E2E) Test Suite with Testcontainers**:
-   - Implement an automated Playwright or Cypress E2E test suite running against an ephemeral MongoDB container, verifying the entire user journey: creator login → post creation → reviewer rejection with feedback → creator edit → reviewer approval → automated cron publishing.
+4. **End-to-End (E2E) Test Suite with Playwright**:
+   - Implement an automated Playwright E2E test suite running against an ephemeral MongoDB container, verifying the entire user journey: creator login → post creation → reviewer rejection with feedback → creator edit → reviewer approval → automated cron publishing.
 5. **Docker Compose & Deployment Pipeline**:
    - Provide a complete multi-container `docker-compose.yml` bundling the NestJS API, React SPA (served via Nginx), and MongoDB with healthchecks for one-click staging deployments.

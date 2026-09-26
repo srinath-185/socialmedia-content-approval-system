@@ -3,6 +3,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { AuditLogsService } from './audit-logs.service';
 import { AuditLogsController } from './audit-logs.controller';
 import { AuditLog, AuditLogSchema } from './schemas/audit-log.schema';
+import { AuditLogsRepository } from './repositories/audit-logs.repository';
 import { UsersModule } from '../users/users.module';
 
 @Module({
@@ -11,7 +12,7 @@ import { UsersModule } from '../users/users.module';
     UsersModule,
   ],
   controllers: [AuditLogsController],
-  providers: [AuditLogsService],
-  exports: [AuditLogsService, MongooseModule],
+  providers: [AuditLogsService, AuditLogsRepository],
+  exports: [AuditLogsService, AuditLogsRepository, MongooseModule],
 })
 export class AuditLogsModule {}

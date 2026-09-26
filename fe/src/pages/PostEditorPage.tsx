@@ -6,6 +6,7 @@ import { PostEditor } from '../components/posts/PostEditor';
 import { PostPreview } from '../components/posts/PostPreview';
 import { LoadingSpinner } from '../components/common/LoadingSpinner';
 import { ErrorMessage } from '../components/common/ErrorMessage';
+import { getErrorMessage } from '../utils/errorMapper';
 import { ArrowLeft, Sparkles } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -88,15 +89,8 @@ export const PostEditorPage: React.FC = () => {
         navigate(`/posts/${created._id}`);
       }
     } catch (err: any) {
-      if (err.response?.status === 409) {
-        toast.error(
-          err.response?.data?.message ||
-            'Optimistic locking conflict: Post has been modified by someone else. Please reload.',
-          { duration: 6000 },
-        );
-      } else {
-        toast.error(err.response?.data?.message || 'Failed to save post. Please review inputs.');
-      }
+      const errorMsg = getErrorMessage(err.response);
+      toast.error(errorMsg, { duration: err.response?.status === 409 ? 6000 : 4000 });
     } finally {
       setIsSubmitting(false);
     }

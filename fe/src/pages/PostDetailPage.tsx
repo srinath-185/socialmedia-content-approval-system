@@ -11,6 +11,7 @@ import { LoadingSpinner } from '../components/common/LoadingSpinner';
 import { ErrorMessage } from '../components/common/ErrorMessage';
 import { formatToIST, toLocalDatetimeInput } from '../../src/utils/dateUtils';
 import { PLATFORM_CONFIGS } from '../../src/utils/platformLimits';
+import { getErrorMessage } from '../utils/errorMapper';
 import {
   ArrowLeft,
   Calendar,
@@ -106,25 +107,14 @@ export const PostDetailPage: React.FC = () => {
       setShowScheduleModal(false);
       setChangesComment('');
     } catch (err: any) {
+      const errorMsg = getErrorMessage(err.response);
       if (err.response?.status === 409) {
-        // Detailed 409 conflict message (scheduling conflict or optimistic lock)
-        const conflictData = err.response.data;
-        if (conflictData.conflictingPostId) {
-          toast.error(
-            `Scheduling Conflict: Another post for this client & platform is scheduled within 2 hours (Conflicting Post: #${conflictData.conflictingPostId.slice(-6)}).`,
-            { duration: 7000 },
-          );
-        } else {
-          toast.error(
-            conflictData.message ||
-              'Optimistic lock conflict: Post was modified by another user. Reloading latest version...',
-            { duration: 6000 },
-          );
-          // Auto-refresh to get latest version
+        toast.error(errorMsg, { duration: 7000 });
+        if (err.response?.data?.errorCode === 'OPTIMISTIC_LOCK_CONFLICT') {
           loadPostData();
         }
       } else {
-        toast.error(err.response?.data?.message || 'Failed to transition post status');
+        toast.error(errorMsg);
       }
     } finally {
       setIsActionLoading(false);

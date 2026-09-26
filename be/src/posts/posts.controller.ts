@@ -6,10 +6,12 @@ import {
   Patch,
   Param,
   Query,
+  Req,
   UseGuards,
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
+import { Request } from 'express';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { PostsService } from './posts.service';
 import { CreatePostDto } from './dto/create-post.dto';
@@ -36,8 +38,13 @@ export class PostsController {
   async create(
     @Body() createPostDto: CreatePostDto,
     @CurrentUser() user: AuthenticatedUser,
+    @Req() req: Request,
   ) {
-    return this.postsService.create(createPostDto, user.userId);
+    const clientContext = {
+      ipAddress: (req.headers['x-forwarded-for'] as string) || req.ip,
+      userAgent: req.headers['user-agent'],
+    };
+    return this.postsService.create(createPostDto, user.userId, clientContext);
   }
 
   @Get()
@@ -98,7 +105,12 @@ export class PostsController {
     @Param('id') id: string,
     @Body() transitionDto: TransitionPostDto,
     @CurrentUser() user: AuthenticatedUser,
+    @Req() req: Request,
   ) {
-    return this.postsService.transitionStatus(id, transitionDto, user);
+    const clientContext = {
+      ipAddress: (req.headers['x-forwarded-for'] as string) || req.ip,
+      userAgent: req.headers['user-agent'],
+    };
+    return this.postsService.transitionStatus(id, transitionDto, user, clientContext);
   }
 }

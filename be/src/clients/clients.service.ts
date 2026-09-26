@@ -1,63 +1,47 @@
-import {
-  Injectable,
-  NotFoundException,
-  BadRequestException,
-  ConflictException,
-} from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
-import { Client, ClientDocument } from './schemas/client.schema';
+import { Injectable } from '@nestjs/common';
+import { ClientsRepository } from './repositories/clients.repository';
+import { UsersRepository } from '../users/repositories/users.repository';
 import { CreateClientDto } from './dto/create-client.dto';
 import { UpdateClientDto } from './dto/update-client.dto';
-import { User, UserDocument } from '../users/schemas/user.schema';
 import { Role } from '../common/enums/role.enum';
+import {
+  ConflictAppError,
+  NotFoundAppError,
+  ValidationAppError,
+} from '../common/errors/app-error';
+import { ErrorCode } from '../common/errors/error-codes.enum';
 
 @Injectable()
 export class ClientsService {
   constructor(
-    @InjectModel(Client.name) private clientModel: Model<ClientDocument>,
-    @InjectModel(User.name) private userModel: Model<UserDocument>,
+    private readonly clientsRepository: ClientsRepository,
+    private readonly usersRepository: UsersRepository,
   ) {}
 
   async create(createClientDto: CreateClientDto) {
-    const existing = await this.clientModel.findOne({
-      brandName: { $regex: new RegExp(`^${createClientDto.brandName.trim()}$`, 'i') },
-    }).exec();
-
+    const existing = await this.clientsRepository.findByBrandName(createClientDto.brandName);
     if (existing) {
-      throw new ConflictException(`Client brand "${createClientDto.brandName}" already exists`);
+      throw new ConflictAppError(
+        ErrorCode.CLIENT_ALREADY_EXISTS,
+        `Client brand "${createClientDto.brandName}" already exists`,
+      );
     }
 
-    const client = new this.clientModel({
-      brandName: createClientDto.brandName.trim(),
-      reviewers: [],
-    });
-
-    return client.save();
+    return this.clientsRepository.create(createClientDto.brandName);
   }
 
   async findAll(user?: { userId: string; role: string }) {
-    const query: any = {};
-    if (user && user.role === Role.REVIEWER) {
-      query.reviewers = new Types.ObjectId(user.userId);
-    }
-    return this.clientModel
-      .find(query)
-      .populate('reviewers', 'name email role')
-      .sort({ brandName: 1 })
-      .exec();
+    const reviewerId = user && user.role === Role.REVIEWER ? user.userId : undefined;
+    return this.clientsRepository.findAll(reviewerId);
   }
 
   async findOne(id: string) {
-    if (!Types.ObjectId.isValid(id)) {
-      throw new BadRequestException(`Invalid client ID format: "${id}"`);
-    }
-    const client = await this.clientModel
-      .findById(id)
-      .populate('reviewers', 'name email role')
-      .exec();
+    const client = await this.clientsRepository.findById(id);
     if (!client) {
-      throw new NotFoundException(`Client with ID "${id}" not found`);
+      throw new NotFoundAppError(
+        ErrorCode.CLIENT_NOT_FOUND,
+        `Client with ID "${id}" not found`,
+      );
     }
     return client;
   }
@@ -67,12 +51,12 @@ export class ClientsService {
 
     const trimmedName = updateClientDto.brandName.trim();
     if (trimmedName.toLowerCase() !== client.brandName.toLowerCase()) {
-      const duplicate = await this.clientModel.findOne({
-        brandName: { $regex: new RegExp(`^${trimmedName}$`, 'i') },
-        _id: { $ne: id },
-      }).exec();
+      const duplicate = await this.clientsRepository.findByBrandName(trimmedName, id);
       if (duplicate) {
-        throw new ConflictException(`Client brand "${trimmedName}" already exists`);
+        throw new ConflictAppError(
+          ErrorCode.CLIENT_ALREADY_EXISTS,
+          `Client brand "${trimmedName}" already exists`,
+        );
       }
       client.brandName = trimmedName;
     }
@@ -82,63 +66,50 @@ export class ClientsService {
 
   async remove(id: string) {
     const client = await this.findOne(id);
-    await this.clientModel.findByIdAndDelete(id).exec();
+    await this.clientsRepository.delete(id);
     return { success: true, message: `Client "${client.brandName}" successfully deleted` };
   }
 
   async assignReviewer(clientId: string, reviewerId: string) {
     const client = await this.findOne(clientId);
 
-    if (!Types.ObjectId.isValid(reviewerId)) {
-      throw new BadRequestException(`Invalid reviewer ID: "${reviewerId}"`);
-    }
-
-    const reviewer = await this.userModel.findById(reviewerId).exec();
+    const reviewer = await this.usersRepository.findById(reviewerId);
     if (!reviewer) {
-      throw new NotFoundException(`Reviewer with ID "${reviewerId}" not found`);
+      throw new NotFoundAppError(
+        ErrorCode.USER_NOT_FOUND,
+        `Reviewer with ID "${reviewerId}" not found`,
+      );
     }
 
     if (reviewer.role !== Role.REVIEWER) {
-      throw new BadRequestException(
+      throw new ValidationAppError(
+        ErrorCode.REVIEWER_ROLE_REQUIRED,
         `User "${reviewer.name}" has role ${reviewer.role}. Only users with role REVIEWER can be assigned to clients.`,
       );
     }
 
-    const reviewerObjectId = new Types.ObjectId(reviewerId);
     const isAlreadyAssigned = client.reviewers.some(
-      (r: any) => r._id?.toString() === reviewerId || r.toString() === reviewerId,
+      (r: any) => (r._id ? r._id.toString() : r.toString()) === reviewerId,
     );
 
     if (isAlreadyAssigned) {
-      throw new ConflictException(`Reviewer "${reviewer.name}" is already assigned to ${client.brandName}`);
+      throw new ConflictAppError(
+        ErrorCode.REVIEWER_ALREADY_ASSIGNED,
+        `Reviewer "${reviewer.name}" is already assigned to ${client.brandName}`,
+      );
     }
 
-    client.reviewers.push(reviewerObjectId);
-    await client.save();
-
-    return this.findOne(clientId);
+    return this.clientsRepository.addReviewer(clientId, reviewerId);
   }
 
   async removeReviewer(clientId: string, reviewerId: string) {
-    const client = await this.findOne(clientId);
+    await this.findOne(clientId);
 
-    const initialCount = client.reviewers.length;
-    client.reviewers = client.reviewers.filter(
-      (r: any) => (r._id ? r._id.toString() : r.toString()) !== reviewerId,
-    );
-
-    if (client.reviewers.length === initialCount) {
-      throw new NotFoundException(`Reviewer "${reviewerId}" was not assigned to this client`);
-    }
-
-    await client.save();
-    return this.findOne(clientId);
+    const updated = await this.clientsRepository.removeReviewer(clientId, reviewerId);
+    return updated;
   }
 
   async findClientIdsForReviewer(reviewerId: string): Promise<string[]> {
-    const clients = await this.clientModel.find({
-      reviewers: new Types.ObjectId(reviewerId),
-    }).select('_id').exec();
-    return clients.map((c) => c._id.toString());
+    return this.clientsRepository.findClientIdsByReviewer(reviewerId);
   }
 }

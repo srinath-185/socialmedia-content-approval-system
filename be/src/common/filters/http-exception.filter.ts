@@ -16,25 +16,31 @@ export class HttpExceptionFilter implements ExceptionFilter {
     const exceptionResponse = exception.getResponse();
 
     let message: string | string[] = exception.message;
-    let error = HttpStatus[status] || 'Error';
-    let extraData: Record<string, any> = {};
+    let errorCode: string = 'INTERNAL_ERROR';
+    let details: Record<string, any> = {};
 
     if (typeof exceptionResponse === 'string') {
       message = exceptionResponse;
     } else if (typeof exceptionResponse === 'object' && exceptionResponse !== null) {
       const respObj = exceptionResponse as Record<string, any>;
       message = respObj.message || exception.message;
-      error = respObj.error || error;
-      // Pass through any custom fields (e.g. conflictingPostId for 409)
-      const { message: _, error: __, statusCode: ___, ...rest } = respObj;
-      extraData = rest;
+      errorCode = respObj.errorCode || HttpStatus[status] || 'ERROR';
+
+      // Capture any extra contextual details (e.g. conflictingPostId)
+      if (respObj.details) {
+        details = respObj.details;
+      }
+      if (respObj.conflictingPostId) {
+        details.conflictingPostId = respObj.conflictingPostId;
+      }
     }
 
     response.status(status).json({
+      success: false,
       statusCode: status,
+      errorCode,
       message,
-      error,
-      ...extraData,
+      details,
       timestamp: new Date().toISOString(),
     });
   }
