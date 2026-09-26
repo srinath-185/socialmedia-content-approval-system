@@ -29,6 +29,12 @@ An enterprise-grade, full-stack content workflow and approval management platfor
 - **Interactive Kanban Board**: 6 columns representing each status stage with real-time client and platform filters.
 - **Live Social Feed Preview**: Realistic feed mockup cards mimicking Instagram, Facebook, LinkedIn, and X feeds as copy is composed.
 - **Interactive Discussion Thread & Visual Audit Timeline**: Complete chronological history and contextual reviewer feedback.
+- **Separated Enterprise Date & Time Pickers**:
+  - **Publication Date**: Dedicated upward-opening calendar picker with month/year navigation, weekday columns, disabled past dates, and quick presets (`Today`, `Tomorrow`, `+2 Days`, `Next Wk`).
+  - **Publication Time (IST)**: Dedicated 12-hour time picker with AM/PM toggle, 5-minute intervals, and smart presets including **`+2h 15m (Safe)`** (instantly jumps beyond the 2-hour scheduling conflict window), `9:00 AM` (Morning), `1:00 PM` (Afternoon), `5:00 PM` (Evening), and `8:00 PM` (Prime Time).
+  - Both components automatically compute safe ISO UTC timestamps for MongoDB persistence while displaying in Indian Standard Time (IST).
+- **Pixel-Perfect Enterprise Toast Notification System**: Custom-styled toasts via Sonner featuring a 5px vertical accent stripe (red for errors, green for success, amber for warnings, brand blue for info) and an integrated, accessible soft-square close button on the right inside the card.
+- **Brand-Aligned Enterprise Design**: Sleek modern UI built with Conceps Media's `#4f39f6` brand palette, split login portal layout with live client governance highlights, and zero-distraction cards.
 - **Automated Unit Testing**: 20 unit tests covering workflow transitions, conflict detection, platform limits, self-approval prevention, and creator edit permissions.
 - **OpenAPI / Swagger Documentation**: Available at `/api/docs`.
 
@@ -36,9 +42,9 @@ An enterprise-grade, full-stack content workflow and approval management platfor
 
 ## 🛠️ Tech Stack
 
-- **Backend (`be/`)**: NestJS 11, TypeScript, Mongoose 8 / MongoDB, Passport JWT, Bcrypt, Class-Validator, NestJS Schedule, NestJS Swagger.
-- **Frontend (`fe/`)**: React 19, TypeScript, Vite 8, Tailwind CSS v4, React Router v7, Axios, Lucide React, React Hot Toast, Date-Fns.
-- **Database**: MongoDB with compound indexes for conflict queries: `{ client: 1, platform: 1, scheduledAt: 1 }`.
+- **Backend (`be/`)**: NestJS 11, TypeScript, Mongoose 8 / MongoDB 7, Passport JWT, Bcrypt, Class-Validator, NestJS Schedule, NestJS Swagger.
+- **Frontend (`fe/`)**: React 19, TypeScript, Vite 8, Tailwind CSS v4, React Router v7, Axios, Lucide React, Sonner (custom styled), Date-Fns.
+- **Database**: MongoDB 7 with compound indexes for conflict queries: `{ client: 1, platform: 1, scheduledAt: 1 }`.
 
 ---
 
@@ -46,7 +52,11 @@ An enterprise-grade, full-stack content workflow and approval management platfor
 
 ### Prerequisites
 - Node.js (v18+ recommended)
-- MongoDB instance running locally (default: `mongodb://localhost:27017/content_approval_system`) or MongoDB Atlas URI
+- MongoDB 7 running locally or via Docker:
+  ```bash
+  docker run -d --name content-approval-mongo -p 27017:27017 mongo:7
+  ```
+  Or a remote MongoDB Atlas URI specified in `be/.env`.
 
 ---
 
