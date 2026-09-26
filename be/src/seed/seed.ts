@@ -138,19 +138,19 @@ async function seed() {
   // -------------------------------------------------------------- 2. Clients
   const clients = await ClientModel.create([
     {
-      brandName: 'Kaveri Precision Engineering',
+      brandName: 'Kaveri Precision Engineering Pvt Ltd',
       reviewers: [u.reviewer1._id, u.reviewer2._id],
     },
     {
-      brandName: 'Pampaana Aqua Systems',
+      brandName: 'Pampaana Aqua Systems Pvt Ltd',
       reviewers: [u.reviewer1._id],
     },
     {
-      brandName: 'Illam Digital',
+      brandName: 'Illam Digital Solutions Pvt Ltd',
       reviewers: [u.reviewer2._id],
     },
     {
-      brandName: 'Sandpiper Coastal Hospitality',
+      brandName: 'Sandpiper Coastal Hospitality Pvt Ltd',
       reviewers: [u.reviewer1._id, u.reviewer2._id],
     },
   ]);

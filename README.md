@@ -99,8 +99,8 @@ The database seeder (`npm run seed` in `be/`) populates the system with pre-conf
 | **ADMIN** | Karthik Subramaniam | `admin@concepsmedia.com` | `Admin@123` | Full access to users, clients, reviewer assignments, and all posts |
 | **CREATOR 1** | Divya Natarajan | `creator1@concepsmedia.com` | `Creator@123` | Drafts & edits own posts; submits for review |
 | **CREATOR 2** | Arun Prabhakaran | `creator2@concepsmedia.com` | `Creator@123` | Drafts & edits own posts; submits for review |
-| **REVIEWER 1** | Meenakshi Raghunathan | `reviewer1@concepsmedia.com` | `Reviewer@123` | Reviews posts for **Kaveri Precision Engineering**, **Pampaana Aqua Systems** & **Sandpiper Coastal Hospitality** |
-| **REVIEWER 2** | Sridhar Balasubramanian | `reviewer2@concepsmedia.com` | `Reviewer@123` | Reviews posts for **Kaveri Precision Engineering**, **Illam Digital** & **Sandpiper Coastal Hospitality** |
+| **REVIEWER 1** | Meenakshi Raghunathan | `reviewer1@concepsmedia.com` | `Reviewer@123` | Reviews posts for **Kaveri Precision Engineering Pvt Ltd**, **Pampaana Aqua Systems Pvt Ltd** & **Sandpiper Coastal Hospitality Pvt Ltd** |
+| **REVIEWER 2** | Sridhar Balasubramanian | `reviewer2@concepsmedia.com` | `Reviewer@123` | Reviews posts for **Kaveri Precision Engineering Pvt Ltd**, **Illam Digital Solutions Pvt Ltd** & **Sandpiper Coastal Hospitality Pvt Ltd** |
 
 > **Note:** `npm run seed` wipes all five collections before repopulating them. Point `MONGODB_URI` at a development database only.
 
@@ -110,10 +110,10 @@ The seeder creates four fictional Tamil Nadu–based client brands with fully po
 
 | Client brand | Base | Reviewers |
 | :--- | :--- | :--- |
-| **Kaveri Precision Engineering** | Coimbatore | Reviewer 1, Reviewer 2 |
-| **Pampaana Aqua Systems** | Chennai | Reviewer 1 |
-| **Illam Digital** | Chennai | Reviewer 2 |
-| **Sandpiper Coastal Hospitality** | Mahabalipuram | Reviewer 1, Reviewer 2 |
+| **Kaveri Precision Engineering Pvt Ltd** | Coimbatore | Reviewer 1, Reviewer 2 |
+| **Pampaana Aqua Systems Pvt Ltd** | Chennai | Reviewer 1 |
+| **Illam Digital Solutions Pvt Ltd** | Chennai | Reviewer 2 |
+| **Sandpiper Coastal Hospitality Pvt Ltd** | Mahabalipuram | Reviewer 1, Reviewer 2 |
 
 The seeder self-validates before writing: it rejects any caption that exceeds its platform's character limit, mixes Latin and Tamil script, or any review action by a reviewer who is not assigned to that client.
 

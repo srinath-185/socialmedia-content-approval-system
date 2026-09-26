@@ -28,7 +28,7 @@ describe('PostsService - Unit Tests', () => {
 
   const mockClient = {
     _id: new Types.ObjectId(mockClientId),
-    brandName: 'Kaveri Precision Engineering',
+    brandName: 'Kaveri Precision Engineering Pvt Ltd',
     reviewers: [new Types.ObjectId(reviewerId)],
   };
 
