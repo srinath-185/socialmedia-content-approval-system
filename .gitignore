@@ -36,3 +36,4 @@ lerna-debug.log*
 # Coverage directory used by tools like istanbul
 coverage/
 */coverage/
+*.tsbuildinfo
