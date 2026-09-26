@@ -62,86 +62,86 @@ export const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className="h-screen max-h-screen w-full flex bg-zinc-50/60 antialiased font-sans overflow-hidden">
-      {/* Left Column: Generous Width Sign-In Form (Black & White Theme) */}
-      <div className="flex-1 h-full flex flex-col justify-center items-center p-6 sm:p-10 lg:p-12 xl:p-16 overflow-y-auto">
-        <div className="w-full max-w-xl my-auto">
+    <div className="h-screen max-h-screen w-full flex bg-zinc-50/70 antialiased font-sans overflow-hidden">
+      {/* Left Column: Compact Sign-In Form (Reduced Width, Zero Scroll) */}
+      <div className="w-full lg:w-[460px] xl:w-[480px] 2xl:w-[520px] shrink-0 h-full flex flex-col justify-center items-center p-6 sm:p-8 lg:p-10 overflow-hidden bg-white/60 border-r border-zinc-200/60">
+        <div className="w-full max-w-[390px] my-auto">
           {/* Mobile Brand Header */}
-          <div className="lg:hidden text-center mb-6">
-            <div className="w-12 h-12 rounded-2xl bg-black flex items-center justify-center text-white mx-auto shadow-md mb-2">
-              <Layers className="w-6 h-6" />
+          <div className="lg:hidden text-center mb-5">
+            <div className="w-11 h-11 rounded-2xl bg-black flex items-center justify-center text-white mx-auto shadow-md mb-2">
+              <Layers className="w-5 h-5" />
             </div>
-            <h1 className="text-xl font-bold text-black tracking-tight">Conceps Media</h1>
+            <h1 className="text-lg font-bold text-black tracking-tight">Conceps Media</h1>
             <p className="text-xs text-zinc-500">Content Approval System</p>
           </div>
 
-          {/* Form Card (Wide & Elegant) */}
-          <div className="bg-white rounded-3xl shadow-xl shadow-zinc-200/50 border border-zinc-200/80 p-8 sm:p-10">
-            <div className="mb-6">
-              <div className="hidden lg:flex items-center gap-2.5 mb-3">
-                <div className="w-9 h-9 rounded-xl bg-black flex items-center justify-center text-white shadow-xs">
-                  <Layers className="w-4.5 h-4.5 text-white" />
+          {/* Form Card */}
+          <div className="bg-white rounded-3xl shadow-xl shadow-zinc-200/50 border border-zinc-200/80 p-6 sm:p-7">
+            <div className="mb-5">
+              <div className="hidden lg:flex items-center gap-2 mb-2.5">
+                <div className="w-8 h-8 rounded-xl bg-black flex items-center justify-center text-white shadow-xs">
+                  <Layers className="w-4 h-4 text-white" />
                 </div>
                 <div>
-                  <span className="text-sm font-bold tracking-tight text-black block leading-none">
+                  <span className="text-xs font-bold tracking-tight text-black block leading-none">
                     Conceps Media
                   </span>
-                  <span className="text-[10px] font-semibold text-zinc-400 tracking-wider uppercase">
+                  <span className="text-[9px] font-semibold text-zinc-400 tracking-wider uppercase">
                     Workflow Platform
                   </span>
                 </div>
               </div>
-              <h2 className="text-2xl sm:text-3xl font-bold text-black tracking-tight">
+              <h2 className="text-xl sm:text-2xl font-bold text-black tracking-tight">
                 Sign in to your account
               </h2>
-              <p className="text-sm text-zinc-500 mt-1">
+              <p className="text-xs text-zinc-500 mt-1">
                 Enter your credentials to manage campaigns and approvals
               </p>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-3.5">
               <div>
-                <label className="block text-xs font-semibold text-zinc-700 uppercase tracking-wider mb-1.5">
+                <label className="block text-[11px] font-semibold text-zinc-700 uppercase tracking-wider mb-1">
                   Email Address
                 </label>
                 <div className="relative">
-                  <Mail className="w-4 h-4 text-zinc-400 absolute left-3.5 top-3" />
+                  <Mail className="w-3.5 h-3.5 text-zinc-400 absolute left-3 top-2.5" />
                   <input
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="name@concepsmedia.com"
-                    className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-zinc-200 text-sm text-zinc-900 placeholder-zinc-400 focus:outline-hidden focus:ring-2 focus:ring-black focus:border-black transition bg-zinc-50/50"
+                    className="w-full pl-9 pr-3 py-2 rounded-xl border border-zinc-200 text-xs text-zinc-900 placeholder-zinc-400 focus:outline-hidden focus:ring-2 focus:ring-black focus:border-black transition bg-zinc-50/40"
                     required
                   />
                 </div>
               </div>
 
               <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="block text-xs font-semibold text-zinc-700 uppercase tracking-wider">
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-[11px] font-semibold text-zinc-700 uppercase tracking-wider">
                     Password
                   </label>
-                  <span className="text-xs text-zinc-500 hover:text-black font-medium cursor-pointer transition">
-                    Forgot password?
+                  <span className="text-[11px] text-zinc-500 hover:text-black font-medium cursor-pointer transition">
+                    Forgot?
                   </span>
                 </div>
                 <div className="relative">
-                  <Lock className="w-4 h-4 text-zinc-400 absolute left-3.5 top-3" />
+                  <Lock className="w-3.5 h-3.5 text-zinc-400 absolute left-3 top-2.5" />
                   <input
                     type={showPassword ? 'text' : 'password'}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••"
-                    className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-zinc-200 text-sm text-zinc-900 placeholder-zinc-400 focus:outline-hidden focus:ring-2 focus:ring-black focus:border-black transition bg-zinc-50/50"
+                    className="w-full pl-9 pr-9 py-2 rounded-xl border border-zinc-200 text-xs text-zinc-900 placeholder-zinc-400 focus:outline-hidden focus:ring-2 focus:ring-black focus:border-black transition bg-zinc-50/40"
                     required
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-3 text-zinc-400 hover:text-zinc-700 focus:outline-hidden cursor-pointer"
+                    className="absolute right-2.5 top-2.5 text-zinc-400 hover:text-zinc-700 focus:outline-hidden cursor-pointer"
                   >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                   </button>
                 </div>
               </div>
@@ -149,71 +149,71 @@ export const LoginPage: React.FC = () => {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full mt-2 py-3 px-5 rounded-xl bg-black hover:bg-zinc-800 text-white text-sm font-semibold flex items-center justify-center gap-2 shadow-md shadow-black/10 transition active:scale-[0.99] disabled:opacity-50 cursor-pointer"
+                className="w-full mt-2 py-2.5 px-4 rounded-xl bg-black hover:bg-zinc-800 text-white text-xs font-semibold flex items-center justify-center gap-1.5 shadow-md shadow-black/10 transition active:scale-[0.99] disabled:opacity-50 cursor-pointer"
               >
                 {isSubmitting ? (
                   'Signing in...'
                 ) : (
                   <>
                     <span>Sign In</span>
-                    <ArrowRight className="w-4 h-4" />
+                    <ArrowRight className="w-3.5 h-3.5" />
                   </>
                 )}
               </button>
             </form>
 
             {/* Quick Demo Access Pills */}
-            <div className="mt-6 pt-5 border-t border-zinc-100">
-              <div className="flex items-center justify-between text-xs font-semibold text-zinc-500 mb-2.5">
+            <div className="mt-4 pt-4 border-t border-zinc-100">
+              <div className="flex items-center justify-between text-[11px] font-semibold text-zinc-500 mb-2">
                 <span className="flex items-center gap-1.5">
-                  <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
                   Instant Demo Login
                 </span>
-                <span className="text-[11px] text-zinc-400 font-normal">1-click test</span>
+                <span className="text-[10px] text-zinc-400 font-normal">1-click test</span>
               </div>
-              <div className="grid grid-cols-3 gap-2.5">
+              <div className="grid grid-cols-3 gap-1.5">
                 <button
                   type="button"
                   onClick={() => handleQuickLogin('admin@concepsmedia.com', 'Admin@123')}
                   disabled={isSubmitting}
-                  className="py-2 px-3 rounded-xl border border-zinc-200 bg-zinc-50/80 hover:bg-zinc-100 hover:border-zinc-300 text-center transition cursor-pointer disabled:opacity-50 group"
+                  className="py-1.5 px-2 rounded-lg border border-zinc-200 bg-zinc-50/80 hover:bg-zinc-100 hover:border-zinc-300 text-center transition cursor-pointer disabled:opacity-50 group"
                 >
-                  <span className="block text-xs font-bold text-zinc-900 group-hover:text-black">Admin</span>
-                  <span className="block text-[10px] text-zinc-400 font-medium">All Clients</span>
+                  <span className="block text-[11px] font-bold text-zinc-900 group-hover:text-black">Admin</span>
+                  <span className="block text-[9px] text-zinc-400 font-medium">All Clients</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => handleQuickLogin('creator1@concepsmedia.com', 'Creator@123')}
                   disabled={isSubmitting}
-                  className="py-2 px-3 rounded-xl border border-zinc-200 bg-zinc-50/80 hover:bg-zinc-100 hover:border-zinc-300 text-center transition cursor-pointer disabled:opacity-50 group"
+                  className="py-1.5 px-2 rounded-lg border border-zinc-200 bg-zinc-50/80 hover:bg-zinc-100 hover:border-zinc-300 text-center transition cursor-pointer disabled:opacity-50 group"
                 >
-                  <span className="block text-xs font-bold text-zinc-900 group-hover:text-black">Creator</span>
-                  <span className="block text-[10px] text-zinc-400 font-medium">Draft Posts</span>
+                  <span className="block text-[11px] font-bold text-zinc-900 group-hover:text-black">Creator</span>
+                  <span className="block text-[9px] text-zinc-400 font-medium">Draft Posts</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => handleQuickLogin('reviewer1@concepsmedia.com', 'Reviewer@123')}
                   disabled={isSubmitting}
-                  className="py-2 px-3 rounded-xl border border-zinc-200 bg-zinc-50/80 hover:bg-zinc-100 hover:border-zinc-300 text-center transition cursor-pointer disabled:opacity-50 group"
+                  className="py-1.5 px-2 rounded-lg border border-zinc-200 bg-zinc-50/80 hover:bg-zinc-100 hover:border-zinc-300 text-center transition cursor-pointer disabled:opacity-50 group"
                 >
-                  <span className="block text-xs font-bold text-zinc-900 group-hover:text-black">Reviewer</span>
-                  <span className="block text-[10px] text-zinc-400 font-medium">Approve/Edit</span>
+                  <span className="block text-[11px] font-bold text-zinc-900 group-hover:text-black">Reviewer</span>
+                  <span className="block text-[9px] text-zinc-400 font-medium">Approve/Edit</span>
                 </button>
               </div>
             </div>
           </div>
 
-          <p className="text-center text-xs text-zinc-400 mt-4">
+          <p className="text-center text-[11px] text-zinc-400 mt-3">
             Conceps Media • Role-Based Access Control • 256-bit JWT
           </p>
         </div>
       </div>
 
-      {/* Right Column: Enterprise Hero Banner (Obsidian Black & White Theme) */}
-      <div className="hidden lg:flex lg:w-1/2 xl:w-5/12 bg-gradient-to-br from-black via-zinc-950 to-neutral-950 text-white relative flex-col justify-between p-10 xl:p-12 overflow-hidden border-l border-zinc-800/80 h-full">
+      {/* Right Column: Wide Enterprise Hero Banner (Expanded Width) */}
+      <div className="hidden lg:flex flex-1 bg-gradient-to-br from-black via-zinc-950 to-neutral-950 text-white relative flex-col justify-between p-10 xl:p-14 2xl:p-16 overflow-hidden h-full">
         {/* Subtle Ambient Glows */}
-        <div className="absolute top-0 right-0 -mr-20 -mt-20 w-96 h-96 bg-zinc-700/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-96 h-96 bg-zinc-800/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute top-0 right-0 -mr-20 -mt-20 w-[500px] h-[500px] bg-zinc-700/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-[500px] h-[500px] bg-zinc-800/10 rounded-full blur-3xl pointer-events-none" />
 
         {/* Brand Header */}
         <div className="relative z-10 shrink-0">
@@ -236,20 +236,20 @@ export const LoginPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Hero Value Proposition */}
-        <div className="relative z-10 my-auto py-4 space-y-6 max-w-lg">
+        {/* Hero Value Proposition (Expanded Width) */}
+        <div className="relative z-10 my-auto py-4 space-y-6 max-w-2xl w-full">
           <div className="space-y-3">
-            <h1 className="text-3xl xl:text-4xl font-extrabold tracking-tight text-white leading-tight">
+            <h1 className="text-3xl xl:text-4xl 2xl:text-5xl font-extrabold tracking-tight text-white leading-tight">
               Deterministic approvals for multi-brand campaigns.
             </h1>
-            <p className="text-sm text-zinc-400 leading-relaxed font-normal">
+            <p className="text-sm xl:text-base text-zinc-400 leading-relaxed font-normal max-w-xl">
               Manage drafting, assigned reviewer sign-offs, 2-hour scheduling conflict checks, and automated publishing across X, Instagram, LinkedIn, and Facebook.
             </p>
           </div>
 
-          {/* Key Feature Pillars */}
-          <div className="space-y-3 pt-1">
-            <div className="flex items-start gap-3 p-3.5 rounded-2xl bg-zinc-900/80 border border-zinc-800/90 backdrop-blur-xs">
+          {/* Key Feature Pillars (Expansive Cards) */}
+          <div className="space-y-3.5 pt-1 w-full">
+            <div className="flex items-start gap-3.5 p-4 rounded-2xl bg-zinc-900/80 border border-zinc-800/90 backdrop-blur-xs transition hover:border-zinc-700">
               <CheckCircle2 className="w-5 h-5 text-zinc-300 shrink-0 mt-0.5" />
               <div>
                 <h2 className="text-sm font-semibold text-white">Strict Multi-Tier RBAC</h2>
@@ -259,7 +259,7 @@ export const LoginPage: React.FC = () => {
               </div>
             </div>
 
-            <div className="flex items-start gap-3 p-3.5 rounded-2xl bg-zinc-900/80 border border-zinc-800/90 backdrop-blur-xs">
+            <div className="flex items-start gap-3.5 p-4 rounded-2xl bg-zinc-900/80 border border-zinc-800/90 backdrop-blur-xs transition hover:border-zinc-700">
               <Clock className="w-5 h-5 text-zinc-300 shrink-0 mt-0.5" />
               <div>
                 <h2 className="text-sm font-semibold text-white">Conflict-Free Scheduling</h2>
@@ -269,7 +269,7 @@ export const LoginPage: React.FC = () => {
               </div>
             </div>
 
-            <div className="flex items-start gap-3 p-3.5 rounded-2xl bg-zinc-900/80 border border-zinc-800/90 backdrop-blur-xs">
+            <div className="flex items-start gap-3.5 p-4 rounded-2xl bg-zinc-900/80 border border-zinc-800/90 backdrop-blur-xs transition hover:border-zinc-700">
               <ShieldCheck className="w-5 h-5 text-zinc-300 shrink-0 mt-0.5" />
               <div>
                 <h2 className="text-sm font-semibold text-white">Immutable Audit Trail</h2>
