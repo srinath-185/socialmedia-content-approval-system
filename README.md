@@ -62,7 +62,7 @@ npm install
 # Copy .env.example to .env
 cp .env.example .env
 
-# 3. Seed Database (Creates 1 Admin, 2 Creators, 2 Reviewers, 3 Clients, 16+ Posts)
+# 3. Seed Database (Creates 1 Admin, 2 Creators, 2 Reviewers, 4 Clients, 20 Posts)
 npm run seed
 
 # 4. Run automated unit tests
@@ -96,11 +96,26 @@ The database seeder (`npm run seed` in `be/`) populates the system with pre-conf
 
 | Role | Name | Email | Password | Assigned Permissions |
 | :--- | :--- | :--- | :--- | :--- |
-| **ADMIN** | Eleanor Vance | `admin@concepsmedia.com` | `Admin@123` | Full access to users, clients, reviewer assignments, and all posts |
-| **CREATOR 1** | Marcus Chen | `creator1@concepsmedia.com` | `Creator@123` | Drafts & edits own posts; submits for review |
-| **CREATOR 2** | Sophia Patel | `creator2@concepsmedia.com` | `Creator@123` | Drafts & edits own posts; submits for review |
-| **REVIEWER 1** | Liam Gallagher | `reviewer1@concepsmedia.com` | `Reviewer@123` | Reviews posts for **Nexus Horizon** & **Aura Dynamics** |
-| **REVIEWER 2** | Amara Okafor | `reviewer2@concepsmedia.com` | `Reviewer@123` | Reviews posts for **Nexus Horizon** & **Zenith Labs** |
+| **ADMIN** | Karthik Subramaniam | `admin@concepsmedia.com` | `Admin@123` | Full access to users, clients, reviewer assignments, and all posts |
+| **CREATOR 1** | Divya Natarajan | `creator1@concepsmedia.com` | `Creator@123` | Drafts & edits own posts; submits for review |
+| **CREATOR 2** | Arun Prabhakaran | `creator2@concepsmedia.com` | `Creator@123` | Drafts & edits own posts; submits for review |
+| **REVIEWER 1** | Meenakshi Raghunathan | `reviewer1@concepsmedia.com` | `Reviewer@123` | Reviews posts for **Kaveri Precision Engineering**, **Pampaana Aqua Systems** & **Sandpiper Coastal Hospitality** |
+| **REVIEWER 2** | Sridhar Balasubramanian | `reviewer2@concepsmedia.com` | `Reviewer@123` | Reviews posts for **Kaveri Precision Engineering**, **Illam Digital** & **Sandpiper Coastal Hospitality** |
+
+> **Note:** `npm run seed` wipes all five collections before repopulating them. Point `MONGODB_URI` at a development database only.
+
+### Seeded client brands
+
+The seeder creates four fictional Tamil Nadu–based client brands with fully populated approval workflows, review comments and audit trails across all six post statuses:
+
+| Client brand | Base | Reviewers |
+| :--- | :--- | :--- |
+| **Kaveri Precision Engineering** | Coimbatore | Reviewer 1, Reviewer 2 |
+| **Pampaana Aqua Systems** | Chennai | Reviewer 1 |
+| **Illam Digital** | Chennai | Reviewer 2 |
+| **Sandpiper Coastal Hospitality** | Mahabalipuram | Reviewer 1, Reviewer 2 |
+
+The seeder self-validates before writing: it rejects any caption that exceeds its platform's character limit, mixes Latin and Tamil script, or any review action by a reviewer who is not assigned to that client.
 
 > **Tip**: The login page provides quick one-click demo buttons to switch between Admin, Creator, and Reviewer accounts for instant evaluation.
 

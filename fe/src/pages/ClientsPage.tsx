@@ -226,7 +226,7 @@ export const ClientsPage: React.FC = () => {
                 type="text"
                 value={newBrandName}
                 onChange={(e) => setNewBrandName(e.target.value)}
-                placeholder="e.g. Acme Corporation"
+                placeholder="e.g. Kaveri Precision Engineering"
                 className="w-full px-3.5 py-2 rounded-xl border border-slate-200 text-xs text-slate-800 focus:outline-hidden focus:ring-2 focus:ring-indigo-600"
                 required
               />

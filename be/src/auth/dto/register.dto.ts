@@ -3,12 +3,12 @@ import { ApiProperty } from '@nestjs/swagger';
 import { Role } from '../../common/enums/role.enum';
 
 export class RegisterDto {
-  @ApiProperty({ example: 'Srinath Raman', description: 'Full name' })
+  @ApiProperty({ example: 'Karthik Subramaniam', description: 'Full name' })
   @IsString()
   @IsNotEmpty({ message: 'Name cannot be empty' })
   name: string;
 
-  @ApiProperty({ example: 'srinath@concepsmedia.com', description: 'Work email address' })
+  @ApiProperty({ example: 'karthik@concepsmedia.com', description: 'Work email address' })
   @IsEmail({}, { message: 'Please provide a valid email address' })
   @IsNotEmpty({ message: 'Email cannot be empty' })
   email: string;

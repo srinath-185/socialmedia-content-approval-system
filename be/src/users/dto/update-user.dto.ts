@@ -3,7 +3,7 @@ import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Role } from '../../common/enums/role.enum';
 
 export class UpdateUserDto {
-  @ApiPropertyOptional({ example: 'Srinath Raman' })
+  @ApiPropertyOptional({ example: 'Karthik Subramaniam' })
   @IsOptional()
   @IsString()
   name?: string;
