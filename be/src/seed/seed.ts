@@ -2,80 +2,75 @@ import * as mongoose from 'mongoose';
 import * as bcrypt from 'bcrypt';
 import * as dotenv from 'dotenv';
 import { resolve } from 'path';
+import { Types } from 'mongoose';
+
+import { Role, Platform, PostStatus } from '../common/enums';
+import { CAPTION_LIMITS } from '../common/constants/platform-limits';
+import { UserSchema, User } from '../users/schemas/user.schema';
+import { ClientSchema, Client } from '../clients/schemas/client.schema';
+import { PostSchema, Post } from '../posts/schemas/post.schema';
+import { CommentSchema, Comment } from '../comments/schemas/comment.schema';
+import { AuditLogSchema, AuditLog } from '../audit-logs/schemas/audit-log.schema';
 
 dotenv.config({ path: resolve(__dirname, '../../.env') });
 
 const MONGODB_URI =
   process.env.MONGODB_URI || 'mongodb://localhost:27017/content_approval_system';
 
-// Standalone MongoDB Schemas
-const UserSchema = new mongoose.Schema(
-  {
-    name: { type: String, required: true },
-    email: { type: String, required: true, unique: true, lowercase: true },
-    password: { type: String, required: true },
-    role: { type: String, enum: ['ADMIN', 'CREATOR', 'REVIEWER'], required: true },
-  },
-  { timestamps: true },
-);
+const UserModel = mongoose.model<User>(User.name, UserSchema);
+const ClientModel = mongoose.model<Client>(Client.name, ClientSchema);
+const PostModel = mongoose.model<Post>(Post.name, PostSchema);
+const CommentModel = mongoose.model<Comment>(Comment.name, CommentSchema);
+const AuditLogModel = mongoose.model<AuditLog>(AuditLog.name, AuditLogSchema);
 
-const ClientSchema = new mongoose.Schema(
-  {
-    brandName: { type: String, required: true, unique: true },
-    reviewers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
-  },
-  { timestamps: true },
-);
+const HOUR = 3600 * 1000;
+const now = Date.now();
+const hoursAgo = (h: number) => new Date(now - h * HOUR);
+const hoursAhead = (h: number) => new Date(now + h * HOUR);
 
-const PostSchema = new mongoose.Schema(
-  {
-    client: { type: mongoose.Schema.Types.ObjectId, ref: 'Client', required: true },
-    platform: { type: String, enum: ['INSTAGRAM', 'FACEBOOK', 'LINKEDIN', 'X'], required: true },
-    caption: { type: String, required: true },
-    scheduledAt: { type: Date, default: null },
-    status: {
-      type: String,
-      enum: ['DRAFT', 'IN_REVIEW', 'APPROVED', 'CHANGES_REQUESTED', 'SCHEDULED', 'PUBLISHED'],
-      required: true,
-    },
-    createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-    version: { type: Number, default: 1 },
-  },
-  { timestamps: true },
-);
+/** Plausible Chennai/Coimbatore client-side IPs and browser strings for audit realism. */
+const CHENNAI_IPS = ['49.207.184.36', '106.75.11.92', '157.46.84.201', '49.36.179.58'];
+const CHROME_UA =
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36';
 
-const CommentSchema = new mongoose.Schema(
-  {
-    post: { type: mongoose.Schema.Types.ObjectId, ref: 'Post', required: true },
-    author: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-    message: { type: String, required: true },
-  },
-  { timestamps: { createdAt: true, updatedAt: false } },
-);
+type UserKey = 'admin' | 'creator1' | 'creator2' | 'reviewer1' | 'reviewer2';
+type ClientKey = 'kaveri' | 'pampaana' | 'illam' | 'sandpiper';
 
-const AuditLogSchema = new mongoose.Schema(
-  {
-    post: { type: mongoose.Schema.Types.ObjectId, ref: 'Post', required: true },
-    actor: { type: String, required: true },
-    fromStatus: { type: String, required: true },
-    toStatus: { type: String, required: true },
-    timestamp: { type: Date, default: () => new Date() },
-  },
-  { timestamps: false },
-);
+interface ReviewComment {
+  author: UserKey;
+  hoursAfterSubmit: number;
+  message: string;
+}
 
-const UserModel = mongoose.model('User', UserSchema);
-const ClientModel = mongoose.model('Client', ClientSchema);
-const PostModel = mongoose.model('Post', PostSchema);
-const CommentModel = mongoose.model('Comment', CommentSchema);
-const AuditLogModel = mongoose.model('AuditLog', AuditLogSchema);
+interface PostSeed {
+  client: ClientKey;
+  platform: Platform;
+  caption: string;
+  status: PostStatus;
+  createdBy: UserKey;
+  /** Hours ago the creator submitted the post for review. Undefined => still a draft. */
+  submittedHoursAgo?: number;
+  /** Reviewer decision that moved the post out of IN_REVIEW. */
+  review?: {
+    decision: 'APPROVED' | 'CHANGES_REQUESTED';
+    reviewer: UserKey;
+    hoursAfterSubmit: number;
+    comment?: string;
+  };
+  /** Hours ago a CHANGES_REQUESTED post was resubmitted. */
+  resubmittedHoursAgo?: number;
+  /** Additional thread replies, oldest first. */
+  thread?: ReviewComment[];
+  scheduledAt?: Date;
+  version: number;
+}
 
 async function seed() {
   console.log('Connecting to MongoDB database at:', MONGODB_URI);
   await mongoose.connect(MONGODB_URI);
   console.log('Connected to MongoDB.');
 
-  // Clean existing collections
+  // Clear existing collections
   await Promise.all([
     UserModel.deleteMany({}),
     ClientModel.deleteMany({}),
@@ -85,307 +80,532 @@ async function seed() {
   ]);
   console.log('Cleared existing records.');
 
-  // Hash password helper
-  const hash = async (pwd: string) => bcrypt.hash(pwd, 10);
+  // Build the real indexes (unique email/brandName, post workflow, scheduling conflict index)
+  await Promise.all([
+    UserModel.syncIndexes(),
+    ClientModel.syncIndexes(),
+    PostModel.syncIndexes(),
+    CommentModel.syncIndexes(),
+    AuditLogModel.syncIndexes(),
+  ]);
 
-  // 1. Seed Users (1 Admin, 2 Creators, 2 Reviewers)
-  const admin = await UserModel.create({
-    name: 'Eleanor Vance (Admin)',
-    email: 'admin@concepsmedia.com',
-    password: await hash('Admin@123'),
-    role: 'ADMIN',
-  });
+  const hash = (pwd: string) => bcrypt.hash(pwd, 10);
 
-  const creator1 = await UserModel.create({
-    name: 'Marcus Chen (Senior Creator)',
-    email: 'creator1@concepsmedia.com',
-    password: await hash('Creator@123'),
-    role: 'CREATOR',
-  });
+  // ---------------------------------------------------------------- 1. Users
+  const users = await UserModel.create([
+    {
+      name: 'Karthik Subramaniam',
+      email: 'admin@concepsmedia.com',
+      password: await hash('Admin@123'),
+      role: Role.ADMIN,
+    },
+    {
+      name: 'Divya Natarajan',
+      email: 'creator1@concepsmedia.com',
+      password: await hash('Creator@123'),
+      role: Role.CREATOR,
+    },
+    {
+      name: 'Arun Prabhakaran',
+      email: 'creator2@concepsmedia.com',
+      password: await hash('Creator@123'),
+      role: Role.CREATOR,
+    },
+    {
+      name: 'Meenakshi Raghunathan',
+      email: 'reviewer1@concepsmedia.com',
+      password: await hash('Reviewer@123'),
+      role: Role.REVIEWER,
+    },
+    {
+      name: 'Sridhar Balasubramanian',
+      email: 'reviewer2@concepsmedia.com',
+      password: await hash('Reviewer@123'),
+      role: Role.REVIEWER,
+    },
+  ]);
 
-  const creator2 = await UserModel.create({
-    name: 'Sophia Patel (Creative Lead)',
-    email: 'creator2@concepsmedia.com',
-    password: await hash('Creator@123'),
-    role: 'CREATOR',
-  });
-
-  const reviewer1 = await UserModel.create({
-    name: 'Liam Gallagher (Senior Reviewer)',
-    email: 'reviewer1@concepsmedia.com',
-    password: await hash('Reviewer@123'),
-    role: 'REVIEWER',
-  });
-
-  const reviewer2 = await UserModel.create({
-    name: 'Amara Okafor (Brand Reviewer)',
-    email: 'reviewer2@concepsmedia.com',
-    password: await hash('Reviewer@123'),
-    role: 'REVIEWER',
-  });
+  const u: Record<UserKey, User & { _id: Types.ObjectId }> = {
+    admin: users[0],
+    creator1: users[1],
+    creator2: users[2],
+    reviewer1: users[3],
+    reviewer2: users[4],
+  };
 
   console.log('Seeded 5 users across ADMIN, CREATOR, and REVIEWER roles.');
 
-  // 2. Seed Clients (3 Clients with assigned reviewers)
-  const client1 = await ClientModel.create({
-    brandName: 'Nexus Horizon',
-    reviewers: [reviewer1._id, reviewer2._id],
-  });
-
-  const client2 = await ClientModel.create({
-    brandName: 'Aura Dynamics',
-    reviewers: [reviewer1._id],
-  });
-
-  const client3 = await ClientModel.create({
-    brandName: 'Zenith Labs',
-    reviewers: [reviewer2._id],
-  });
-
-  console.log('Seeded 3 client brands with assigned reviewers.');
-
-  // 3. Seed Posts (16 posts spread across DRAFT, IN_REVIEW, APPROVED, CHANGES_REQUESTED, SCHEDULED, PUBLISHED)
-  const now = Date.now();
-  const scheduleTime1 = new Date(now + 24 * 3600 * 1000); // +24 hours
-  const scheduleTime2 = new Date(now + 30 * 3600 * 1000); // +30 hours (6h apart, passes 2h conflict rule)
-  const scheduleTime3 = new Date(now + 48 * 3600 * 1000); // +48 hours
-  const publishedTime1 = new Date(now - 48 * 3600 * 1000);
-  const publishedTime2 = new Date(now - 72 * 3600 * 1000);
-
-  const postsSeedData = [
-    // --- DRAFT Posts ---
+  // -------------------------------------------------------------- 2. Clients
+  const clients = await ClientModel.create([
     {
-      client: client1._id,
-      platform: 'INSTAGRAM',
-      caption: 'Unveiling the next frontier in connected design. The new Nexus Alpha is coming soon. #NexusHorizon #DesignInnovation',
-      status: 'DRAFT',
-      createdBy: creator1._id,
+      brandName: 'Kaveri Precision Engineering',
+      reviewers: [u.reviewer1._id, u.reviewer2._id],
+    },
+    {
+      brandName: 'Pampaana Aqua Systems',
+      reviewers: [u.reviewer1._id],
+    },
+    {
+      brandName: 'Illam Digital',
+      reviewers: [u.reviewer2._id],
+    },
+    {
+      brandName: 'Sandpiper Coastal Hospitality',
+      reviewers: [u.reviewer1._id, u.reviewer2._id],
+    },
+  ]);
+
+  const c: Record<ClientKey, Client & { _id: Types.ObjectId; reviewers: Types.ObjectId[] }> = {
+    kaveri: clients[0],
+    pampaana: clients[1],
+    illam: clients[2],
+    sandpiper: clients[3],
+  };
+
+  console.log('Seeded 4 client brands with assigned reviewers.');
+
+  // ---------------------------------------------------------------- 3. Posts
+  const postsSeedData: PostSeed[] = [
+    // ------------------------------------------------------------- DRAFT
+    {
+      client: 'kaveri',
+      platform: Platform.X,
+      caption:
+        'Tooling trial starts next week. If Chennai builds a Motor Sports City, we want the jigs already proven. More soon.',
+      status: PostStatus.DRAFT,
+      createdBy: 'creator1',
       version: 1,
     },
     {
-      client: client2._id,
-      platform: 'LINKEDIN',
-      caption: 'Proud to announce that Aura Dynamics has achieved net-zero emissions across all European facilities ahead of schedule.',
-      status: 'DRAFT',
-      createdBy: creator2._id,
+      client: 'pampaana',
+      platform: Platform.INSTAGRAM,
+      caption:
+        '1,671 km of drain lines. One map, updated live. We spent the monsoon walking every ward so your alerts arrive before the water does. Reel drops Sunday.',
+      status: PostStatus.DRAFT,
+      createdBy: 'creator2',
       version: 1,
     },
     {
-      client: client3._id,
-      platform: 'X',
-      caption: 'Breaking: Quantum computing simulations are live. Check our preprint paper on GitHub. #QuantumComputing #Zenith',
-      status: 'DRAFT',
-      createdBy: creator1._id,
+      client: 'illam',
+      platform: Platform.LINKEDIN,
+      caption:
+        'Every major platform now ships AI-content labelling. Here is what that changes for brand teams running Reels at volume, and the three-line disclosure we think is enough.',
+      status: PostStatus.DRAFT,
+      createdBy: 'creator1',
+      version: 1,
+    },
+    {
+      client: 'sandpiper',
+      platform: Platform.INSTAGRAM,
+      caption:
+        'Monsoon does not have to mean a cancelled trip. Our Mahabalipuram kitchen is doing eight hours of rain, one very good filter coffee and absolutely no itinerary.',
+      status: PostStatus.DRAFT,
+      createdBy: 'creator2',
       version: 1,
     },
 
-    // --- IN_REVIEW Posts ---
+    // --------------------------------------------------------- IN_REVIEW
     {
-      client: client1._id,
-      platform: 'LINKEDIN',
-      caption: 'We are expanding our senior engineering division. Discover open leadership roles shaping autonomous systems.',
-      status: 'IN_REVIEW',
-      createdBy: creator1._id,
+      client: 'kaveri',
+      platform: Platform.LINKEDIN,
+      caption:
+        'Chennai just welcomed its first large global capability centre, and Coimbatore already has three more. We are hiring 26 engineers across EV powertrain, thermal management and quality. Full descriptions in the comments.',
+      status: PostStatus.IN_REVIEW,
+      createdBy: 'creator1',
+      submittedHoursAgo: 6,
+      thread: [
+        {
+          author: 'creator2',
+          hoursAfterSubmit: 2,
+          message:
+            'Headcount confirmed with HR as 26. I have the JD links ready if you want them pinned to the first comment.',
+        },
+      ],
       version: 2,
     },
     {
-      client: client2._id,
-      platform: 'INSTAGRAM',
-      caption: 'Behind the lens at Aura Studios. Every curve engineered with mathematical precision. ✨ #AuraDesign #Craftsmanship',
-      status: 'IN_REVIEW',
-      createdBy: creator2._id,
+      client: 'pampaana',
+      platform: Platform.FACEBOOK,
+      caption:
+        'Weak monsoon, 40-degree afternoons, and a dry month in the interior districts. We spent the last fortnight walking canal systems in north Tamil Nadu. Here is what is actually flowing and what is not.',
+      status: PostStatus.IN_REVIEW,
+      createdBy: 'creator2',
+      submittedHoursAgo: 11,
       version: 2,
     },
     {
-      client: client3._id,
-      platform: 'FACEBOOK',
-      caption: 'Meet our lead research fellows who are transforming materials science into sustainable solutions for tomorrow.',
-      status: 'IN_REVIEW',
-      createdBy: creator1._id,
-      version: 2,
-    },
-
-    // --- CHANGES_REQUESTED Posts ---
-    {
-      client: client1._id,
-      platform: 'X',
-      caption: 'Big drop tonight. You do not want to miss this one. #Hype',
-      status: 'CHANGES_REQUESTED',
-      createdBy: creator1._id,
-      version: 2,
-      reviewComment: 'The caption is too vague. Please include the official event time in IST and our product launch hashtag.',
-      reviewer: reviewer1._id,
-    },
-    {
-      client: client2._id,
-      platform: 'FACEBOOK',
-      caption: 'Save up to 40% on all enterprise subscriptions starting this week. Click link in bio to claim.',
-      status: 'CHANGES_REQUESTED',
-      createdBy: creator2._id,
-      version: 2,
-      reviewComment: 'Enterprise pricing requires corporate disclaimers and valid regional terms. Please update accordingly.',
-      reviewer: reviewer1._id,
-    },
-    {
-      client: client3._id,
-      platform: 'LINKEDIN',
-      caption: 'Our AI model outperformed legacy benchmarks by 10x in internal testing.',
-      status: 'CHANGES_REQUESTED',
-      createdBy: creator2._id,
-      version: 2,
-      reviewComment: 'Please cite the benchmark methodology and include a link to the whitepaper summary.',
-      reviewer: reviewer2._id,
-    },
-
-    // --- APPROVED Posts ---
-    {
-      client: client1._id,
-      platform: 'FACEBOOK',
-      caption: 'Celebrating 10 years of human-centered engineering at Nexus Horizon. Explore our interactive milestone timeline.',
-      status: 'APPROVED',
-      createdBy: creator1._id,
+      client: 'illam',
+      platform: Platform.X,
+      caption:
+        'Chennai has quietly become one of Asia\'s serious investment destinations. Global capability centres, a defence corridor, and an Olympic City in the same decade. The talent argument is already over.',
+      status: PostStatus.IN_REVIEW,
+      createdBy: 'creator1',
+      submittedHoursAgo: 4,
       version: 2,
     },
     {
-      client: client2._id,
-      platform: 'X',
-      caption: 'Join our technical live demo this Thursday at 4 PM IST. We will be walking through scalable microservices architectures. 🚀',
-      status: 'APPROVED',
-      createdBy: creator2._id,
-      version: 2,
-    },
-    {
-      client: client3._id,
-      platform: 'INSTAGRAM',
-      caption: 'Where curiosity meets laboratory rigour. Explore our weekly science journal digest in our bio link. 🔬 #ZenithLabs',
-      status: 'APPROVED',
-      createdBy: creator1._id,
+      client: 'sandpiper',
+      platform: Platform.X,
+      caption:
+        'National Coffee Day is 29 September. Our Mahabalipuram filter coffee is single-origin, and on that day it comes with the view. No discount code needed.',
+      status: PostStatus.IN_REVIEW,
+      createdBy: 'creator2',
+      submittedHoursAgo: 2,
       version: 2,
     },
 
-    // --- SCHEDULED Posts ---
+    // --------------------------------------------------- CHANGES_REQUESTED
     {
-      client: client1._id,
-      platform: 'X',
-      caption: 'Keynote livestream starting in 15 minutes! Tune in to watch the future of enterprise automation unfold live. 🎙️',
-      scheduledAt: scheduleTime1,
-      status: 'SCHEDULED',
-      createdBy: creator1._id,
+      client: 'kaveri',
+      platform: Platform.INSTAGRAM,
+      caption:
+        'We got the first quarter wrong. The line balancing on Line 4 cost us eleven days and nobody caught it. Here is the whole ugly version, no before-and-after, no stock footage.',
+      status: PostStatus.CHANGES_REQUESTED,
+      createdBy: 'creator1',
+      submittedHoursAgo: 30,
+      review: {
+        decision: 'CHANGES_REQUESTED',
+        reviewer: 'reviewer1',
+        hoursAfterSubmit: 5,
+        comment:
+          'Honest post, keep the tone. But two issues: the customer name on Line 4 is identifiable from the photo, and we cannot use the phrase "nobody caught it" without HR sign-off. Blur the nameplate and rephrase the accountability line.',
+      },
+      resubmittedHoursAgo: 7,
+      thread: [
+        {
+          author: 'creator1',
+          hoursAfterSubmit: 22,
+          message:
+            'Plate is blurred in v2 and the line now reads "we caught it late". Uploading the revised card now, can you take another look?',
+        },
+      ],
       version: 3,
     },
     {
-      client: client2._id,
-      platform: 'LINKEDIN',
-      caption: 'Quarterly innovation update: How our cross-functional teams shipped 47 high-impact features in Q3.',
-      scheduledAt: scheduleTime2,
-      status: 'SCHEDULED',
-      createdBy: creator2._id,
+      client: 'pampaana',
+      platform: Platform.LINKEDIN,
+      caption:
+        'Nungambakkam hit 38.1C this month. That is the second highest September reading in a decade, and it is not an urban heat island problem, it is a weak-monsoon problem. What that means for irrigation scheduling.',
+      status: PostStatus.CHANGES_REQUESTED,
+      createdBy: 'creator2',
+      submittedHoursAgo: 26,
+      review: {
+        decision: 'CHANGES_REQUESTED',
+        reviewer: 'reviewer1',
+        hoursAfterSubmit: 4,
+        comment:
+          'The temperature figures need a source line and the historical comparison needs the all-time record cited, otherwise it reads as a claim. Also add a note that irrigation advice is advisory and district officers hold the final call.',
+      },
+      version: 2,
+    },
+    {
+      client: 'illam',
+      platform: Platform.FACEBOOK,
+      caption:
+        'One of our retail clients cut approval turnaround from nine days to four. Same team, same volume. The only structural change was moving review out of email and into a single queue with named owners.',
+      status: PostStatus.CHANGES_REQUESTED,
+      createdBy: 'creator1',
+      submittedHoursAgo: 52,
+      review: {
+        decision: 'CHANGES_REQUESTED',
+        reviewer: 'reviewer2',
+        hoursAfterSubmit: 7,
+        comment:
+          'We need written consent from the client before naming the outcome, and the "nine days to four" number has to be verifiable. Please confirm both, or we reframe it as an anonymised composite.',
+      },
+      version: 2,
+    },
+    {
+      client: 'sandpiper',
+      platform: Platform.X,
+      caption:
+        'It cannot always be Mumbai or Goa. Mahabalipuram holds it down. Stone, surf and a temple older than most of the hotels we fly people to.',
+      status: PostStatus.CHANGES_REQUESTED,
+      createdBy: 'creator2',
+      submittedHoursAgo: 18,
+      review: {
+        decision: 'CHANGES_REQUESTED',
+        reviewer: 'reviewer2',
+        hoursAfterSubmit: 3,
+        comment:
+          'The format works. Two fixes: we are not verified on X yet so drop the handle from the caption, and please add a location tag and a photo. I also want us to avoid implying any city is lesser.',
+      },
+      version: 2,
+    },
+
+    // ------------------------------------------------------------ APPROVED
+    {
+      client: 'kaveri',
+      platform: Platform.FACEBOOK,
+      caption:
+        'Three global capability centres landed in Tamil Nadu in the same month. For a component maker that means one thing: the engineering talent pool just got a lot deeper. We are hiring across precision manufacturing and supply chain.',
+      status: PostStatus.APPROVED,
+      createdBy: 'creator1',
+      submittedHoursAgo: 60,
+      review: {
+        decision: 'APPROVED',
+        reviewer: 'reviewer1',
+        hoursAfterSubmit: 9,
+      },
+      version: 2,
+    },
+    {
+      client: 'pampaana',
+      platform: Platform.INSTAGRAM,
+      caption:
+        'Sixty of our field engineers are on stormwater duty this week. No campaign, no hashtag, just drains. Swipe for the ward-by-ward progress, updated every evening.',
+      status: PostStatus.APPROVED,
+      createdBy: 'creator2',
+      submittedHoursAgo: 40,
+      review: {
+        decision: 'APPROVED',
+        reviewer: 'reviewer1',
+        hoursAfterSubmit: 5,
+      },
+      version: 2,
+    },
+    {
+      client: 'illam',
+      platform: Platform.INSTAGRAM,
+      caption:
+        'No studio, no teleprompter, one take, phone audio. Our account manager walking a client through a rollback in real time. This is the format that is quietly beating our polished Reels.',
+      status: PostStatus.APPROVED,
+      createdBy: 'creator1',
+      submittedHoursAgo: 22,
+      review: {
+        decision: 'APPROVED',
+        reviewer: 'reviewer2',
+        hoursAfterSubmit: 4,
+      },
+      version: 2,
+    },
+
+    // ----------------------------------------------------------- SCHEDULED
+    {
+      client: 'kaveri',
+      platform: Platform.X,
+      scheduledAt: hoursAhead(26),
+      caption:
+        'Motor Sports City gets its formal announcement. If you machine jigs, fixtures or gear components, the tool room matters more than the podium. We will be watching.',
+      status: PostStatus.SCHEDULED,
+      createdBy: 'creator1',
+      submittedHoursAgo: 70,
+      review: {
+        decision: 'APPROVED',
+        reviewer: 'reviewer1',
+        hoursAfterSubmit: 6,
+      },
       version: 3,
     },
     {
-      client: client3._id,
-      platform: 'X',
-      caption: 'Zenith Labs Open Source Toolkit v2.4 is officially published! Download from our developer hub.',
-      scheduledAt: scheduleTime3,
-      status: 'SCHEDULED',
-      createdBy: creator1._id,
+      client: 'pampaana',
+      platform: Platform.LINKEDIN,
+      scheduledAt: hoursAhead(44),
+      caption:
+        'Our quarterly water-impact report is out: diversion recovered, treated volume returned to the system, and what the monsoon did to our assumptions. Full methodology in the post.',
+      status: PostStatus.SCHEDULED,
+      createdBy: 'creator2',
+      submittedHoursAgo: 66,
+      review: {
+        decision: 'APPROVED',
+        reviewer: 'reviewer1',
+        hoursAfterSubmit: 8,
+      },
+      version: 3,
+    },
+    {
+      client: 'sandpiper',
+      platform: Platform.INSTAGRAM,
+      scheduledAt: hoursAhead(68),
+      caption:
+        'The festive season table is set. Nine nights of Navaratri dinners, then the long weekend. Our Mahabalipuram kitchen opens for the full stretch, and the courtyard seats forty.',
+      status: PostStatus.SCHEDULED,
+      createdBy: 'creator2',
+      submittedHoursAgo: 80,
+      review: {
+        decision: 'APPROVED',
+        reviewer: 'reviewer1',
+        hoursAfterSubmit: 11,
+      },
       version: 3,
     },
 
-    // --- PUBLISHED Posts ---
+    // ----------------------------------------------------------- PUBLISHED
     {
-      client: client1._id,
-      platform: 'INSTAGRAM',
-      caption: 'Reflecting on an inspiring week at DesignCon Europe. Thank you to everyone who visited our interactive booth! 📸',
-      scheduledAt: publishedTime1,
-      status: 'PUBLISHED',
-      createdBy: creator1._id,
+      client: 'pampaana',
+      platform: Platform.FACEBOOK,
+      scheduledAt: hoursAgo(50),
+      caption:
+        'Before the first heavy spell: the twelve things every ward should clear this week, and the three numbers to watch if the drains start backing up. Written for residents, not engineers.',
+      status: PostStatus.PUBLISHED,
+      createdBy: 'creator2',
+      submittedHoursAgo: 96,
+      review: {
+        decision: 'APPROVED',
+        reviewer: 'reviewer1',
+        hoursAfterSubmit: 10,
+      },
       version: 4,
     },
     {
-      client: client2._id,
-      platform: 'FACEBOOK',
-      caption: 'Our annual sustainability report is live. Learn how we reduced carbon footprints across all operations in 2025.',
-      scheduledAt: publishedTime2,
-      status: 'PUBLISHED',
-      createdBy: creator2._id,
+      client: 'illam',
+      platform: Platform.LINKEDIN,
+      scheduledAt: hoursAgo(31),
+      caption:
+        'We are opening a 40-seat engineering floor in Chennai. Payment infrastructure, mostly. Hiring is open now and we are more interested in people who have taken a system down than people who have never had to.',
+      status: PostStatus.PUBLISHED,
+      createdBy: 'creator1',
+      submittedHoursAgo: 110,
+      review: {
+        decision: 'APPROVED',
+        reviewer: 'reviewer2',
+        hoursAfterSubmit: 14,
+      },
       version: 4,
     },
   ];
 
-  for (const postItem of postsSeedData) {
-    const { reviewComment, reviewer, ...postFields } = postItem as any;
-    const post = await PostModel.create(postFields);
+  // ------------------------------------------------ Seed integrity self-checks
+  const problems: string[] = [];
 
-    // Initial draft audit log
-    await AuditLogModel.create({
-      post: post._id,
-      actor: post.createdBy.toString(),
-      fromStatus: 'NONE',
-      toStatus: 'DRAFT',
-      timestamp: new Date(now - 7 * 86400 * 1000),
-    });
-
-    if (post.status !== 'DRAFT') {
-      await AuditLogModel.create({
-        post: post._id,
-        actor: post.createdBy.toString(),
-        fromStatus: 'DRAFT',
-        toStatus: 'IN_REVIEW',
-        timestamp: new Date(now - 5 * 86400 * 1000),
-      });
+  for (const [i, p] of postsSeedData.entries()) {
+    const label = `${p.platform} #${i + 1} (${p.status})`;
+    const limit = CAPTION_LIMITS[p.platform];
+    if (p.caption.length > limit) {
+      problems.push(`${label}: caption is ${p.caption.length} chars, limit for ${p.platform} is ${limit}`);
     }
-
-    if (post.status === 'CHANGES_REQUESTED') {
-      await AuditLogModel.create({
-        post: post._id,
-        actor: reviewer.toString(),
-        fromStatus: 'IN_REVIEW',
-        toStatus: 'CHANGES_REQUESTED',
-        timestamp: new Date(now - 4 * 86400 * 1000),
-      });
-
-      if (reviewComment) {
-        await CommentModel.create({
-          post: post._id,
-          author: reviewer,
-          message: reviewComment,
-        });
-      }
+    if (/[A-Za-z]/.test(p.caption) && /[\u0B80-\u0BFF]/.test(p.caption)) {
+      problems.push(`${label}: caption mixes Latin and Tamil script`);
     }
-
-    if (['APPROVED', 'SCHEDULED', 'PUBLISHED'].includes(post.status)) {
-      await AuditLogModel.create({
-        post: post._id,
-        actor: reviewer1._id.toString(),
-        fromStatus: 'IN_REVIEW',
-        toStatus: 'APPROVED',
-        timestamp: new Date(now - 3 * 86400 * 1000),
-      });
+    if (p.review && !c[p.client].reviewers.some((r) => r.equals(u[p.review!.reviewer]._id))) {
+      problems.push(
+        `${label}: ${p.review.reviewer} is not assigned to review "${c[p.client].brandName}"`,
+      );
     }
-
-    if (['SCHEDULED', 'PUBLISHED'].includes(post.status)) {
-      await AuditLogModel.create({
-        post: post._id,
-        actor: admin._id.toString(),
-        fromStatus: 'APPROVED',
-        toStatus: 'SCHEDULED',
-        timestamp: new Date(now - 2 * 86400 * 1000),
-      });
+    if (p.resubmittedHoursAgo && p.status !== PostStatus.CHANGES_REQUESTED) {
+      problems.push(`${label}: resubmittedHoursAgo only applies to CHANGES_REQUESTED posts`);
     }
-
-    if (post.status === 'PUBLISHED') {
-      await AuditLogModel.create({
-        post: post._id,
-        actor: 'SYSTEM',
-        fromStatus: 'SCHEDULED',
-        toStatus: 'PUBLISHED',
-        timestamp: post.scheduledAt || new Date(now - 1 * 86400 * 1000),
-      });
+    if (p.status !== PostStatus.DRAFT && p.submittedHoursAgo === undefined) {
+      problems.push(`${label}: non-draft post is missing submittedHoursAgo`);
+    }
+    if (
+      [PostStatus.SCHEDULED, PostStatus.PUBLISHED].includes(p.status) &&
+      !p.scheduledAt
+    ) {
+      problems.push(`${label}: ${p.status} post is missing scheduledAt`);
     }
   }
 
-  console.log(`Seeded ${postsSeedData.length} posts across all workflow statuses with audit trails.`);
+  if (problems.length) {
+    throw new Error(`Seed data failed self-validation:\n  - ${problems.join('\n  - ')}`);
+  }
+
+  // ---------------------------------------------- Posts, comments, audit logs
+  let commentCount = 0;
+  let auditCount = 0;
+
+  for (const p of postsSeedData) {
+    const { review, thread, submittedHoursAgo, resubmittedHoursAgo, ...postFields } = p;
+
+    const post = await PostModel.create({
+      ...postFields,
+      client: c[p.client]._id,
+      createdBy: u[p.createdBy]._id,
+    });
+    const actor = (key: UserKey) => u[key]._id.toString();
+
+    const submittedAt = submittedHoursAgo ? hoursAgo(submittedHoursAgo) : undefined;
+
+    const log = (
+      actorKey: string,
+      fromStatus: string,
+      toStatus: string,
+      timestamp: Date,
+      metadata: Record<string, any> = {},
+    ) =>
+      AuditLogModel.create({
+        post: post._id,
+        actor: actorKey,
+        fromStatus,
+        toStatus,
+        timestamp,
+        ipAddress: CHENNAI_IPS[auditCount % CHENNAI_IPS.length],
+        userAgent: CHROME_UA,
+        metadata: { source: 'web', ...metadata },
+      }).then(() => {
+        auditCount += 1;
+      });
+
+    // Draft creation
+    await log(actor(p.createdBy), 'NONE', PostStatus.DRAFT, hoursAgo((submittedHoursAgo ?? 24) + 30), {
+      captionLength: p.caption.length,
+      platform: p.platform,
+    });
+
+    if (submittedAt) {
+      await log(actor(p.createdBy), PostStatus.DRAFT, PostStatus.IN_REVIEW, submittedAt);
+
+      if (review) {
+        const reviewAt = new Date(submittedAt.getTime() + review.hoursAfterSubmit * HOUR);
+
+        if (review.decision === 'CHANGES_REQUESTED') {
+          await log(
+            actor(review.reviewer),
+            PostStatus.IN_REVIEW,
+            PostStatus.CHANGES_REQUESTED,
+            reviewAt,
+            { comment: review.comment ?? null },
+          );
+
+          if (review.comment) {
+            await CommentModel.create({
+              post: post._id,
+              author: u[review.reviewer]._id,
+              message: review.comment,
+              createdAt: reviewAt,
+            });
+            commentCount += 1;
+          }
+
+          if (resubmittedHoursAgo) {
+            await log(
+              actor(p.createdBy),
+              PostStatus.CHANGES_REQUESTED,
+              PostStatus.IN_REVIEW,
+              hoursAgo(resubmittedHoursAgo),
+            );
+          }
+        } else {
+          await log(actor(review.reviewer), PostStatus.IN_REVIEW, PostStatus.APPROVED, reviewAt);
+        }
+      }
+    }
+
+    if ([PostStatus.SCHEDULED, PostStatus.PUBLISHED].includes(p.status) && p.scheduledAt) {
+      const scheduledAt = p.scheduledAt;
+      const isPast = scheduledAt.getTime() < now;
+
+      await log(
+        actor('admin'),
+        PostStatus.APPROVED,
+        PostStatus.SCHEDULED,
+        new Date(scheduledAt.getTime() - (isPast ? 26 : 6) * HOUR),
+        { scheduledFor: scheduledAt.toISOString() },
+      );
+
+      if (p.status === PostStatus.PUBLISHED) {
+        await log('SYSTEM', PostStatus.SCHEDULED, PostStatus.PUBLISHED, scheduledAt);
+      }
+    }
+  }
+
+  console.log(
+    `Seeded ${postsSeedData.length} posts, ${commentCount} comments and ${auditCount} audit logs.`,
+  );
+  const spread = Object.values(PostStatus).map(
+    (status) => `${status}=${postsSeedData.filter((p) => p.status === status).length}`,
+  );
+  console.log('Status spread: ' + spread.join(', '));
 
   console.log('\n======================================================');
   console.log('         CONCEPS MEDIA SEED CREDENTIALS');

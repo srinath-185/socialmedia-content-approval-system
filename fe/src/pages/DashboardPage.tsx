@@ -14,6 +14,7 @@ import {
   Building2,
   Share2,
 } from 'lucide-react';
+import { Dropdown } from '../components/common/Dropdown';
 
 export const DashboardPage: React.FC = () => {
   const { user } = useAuth();
@@ -131,38 +132,26 @@ export const DashboardPage: React.FC = () => {
           </div>
 
           {/* Client Filter Dropdown */}
-          <div className="flex items-center gap-1.5">
-            <Building2 className="w-3.5 h-3.5 text-slate-400" />
-            <select
-              value={selectedClient}
-              onChange={(e) => setSelectedClient(e.target.value)}
-              className="py-1.5 pl-2.5 pr-8 rounded-xl border border-slate-200 text-xs text-slate-700 bg-white focus:outline-hidden focus:ring-2 focus:ring-indigo-600 transition"
-            >
-              <option value="">All Client Brands</option>
-              {clients.map((c) => (
-                <option key={c._id} value={c._id}>
-                  {c.brandName}
-                </option>
-              ))}
-            </select>
-          </div>
+          <Dropdown
+            label="Client"
+            value={selectedClient}
+            onChange={setSelectedClient}
+            options={[
+              { value: '', label: 'All Clients' },
+              ...clients.map((c) => ({ value: c._id, label: c.brandName })),
+            ]}
+          />
 
           {/* Platform Filter Dropdown */}
-          <div className="flex items-center gap-1.5">
-            <Share2 className="w-3.5 h-3.5 text-slate-400" />
-            <select
-              value={selectedPlatform}
-              onChange={(e) => setSelectedPlatform(e.target.value)}
-              className="py-1.5 pl-2.5 pr-8 rounded-xl border border-slate-200 text-xs text-slate-700 bg-white focus:outline-hidden focus:ring-2 focus:ring-indigo-600 transition"
-            >
-              <option value="">All Platforms</option>
-              {Object.values(Platform).map((plat) => (
-                <option key={plat} value={plat}>
-                  {plat}
-                </option>
-              ))}
-            </select>
-          </div>
+          <Dropdown
+            label="Platform"
+            value={selectedPlatform}
+            onChange={setSelectedPlatform}
+            options={[
+              { value: '', label: 'All Platforms' },
+              ...Object.values(Platform).map((plat) => ({ value: plat, label: plat })),
+            ]}
+          />
 
           {(selectedClient || selectedPlatform || searchQuery) && (
             <button

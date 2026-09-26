@@ -15,6 +15,7 @@ import {
   User as UserIcon,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { Dropdown } from '../components/common/Dropdown';
 
 export const UsersPage: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
@@ -272,15 +273,17 @@ export const UsersPage: React.FC = () => {
 
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">Assigned Role</label>
-              <select
+              <Dropdown
+                variant="form"
                 value={formData.role}
-                onChange={(e) => setFormData({ ...formData, role: e.target.value as Role })}
-                className="w-full px-3.5 py-2 rounded-xl border border-slate-200 text-xs text-slate-800 bg-white focus:outline-hidden focus:ring-2 focus:ring-indigo-600"
-              >
-                <option value={Role.CREATOR}>CREATOR — Creates and edits draft posts</option>
-                <option value={Role.REVIEWER}>REVIEWER — Approves or requests post changes</option>
-                <option value={Role.ADMIN}>ADMIN — Full platform management</option>
-              </select>
+                onChange={(val) => setFormData({ ...formData, role: val as Role })}
+                options={[
+                  { value: Role.CREATOR, label: 'CREATOR', sublabel: 'Creates and edits draft posts' },
+                  { value: Role.REVIEWER, label: 'REVIEWER', sublabel: 'Approves or requests post changes' },
+                  { value: Role.ADMIN, label: 'ADMIN', sublabel: 'Full platform management' },
+                ]}
+                className="w-full"
+              />
             </div>
 
             <div className="flex justify-end gap-2 pt-2">

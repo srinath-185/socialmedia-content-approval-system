@@ -13,6 +13,7 @@ import {
   Layers,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { Dropdown } from '../components/common/Dropdown';
 
 export const ClientsPage: React.FC = () => {
   const [clients, setClients] = useState<Client[]>([]);
@@ -261,21 +262,18 @@ export const ClientsPage: React.FC = () => {
               <label className="block text-xs font-semibold text-slate-700 mb-1">
                 Select Team Reviewer
               </label>
-              <select
+              <Dropdown
+                variant="form"
+                placeholder="Choose reviewer..."
                 value={selectedReviewerId}
-                onChange={(e) => setSelectedReviewerId(e.target.value)}
-                className="w-full px-3.5 py-2 rounded-xl border border-slate-200 text-xs text-slate-800 bg-white focus:outline-hidden focus:ring-2 focus:ring-indigo-600"
-                required
-              >
-                <option value="" disabled>
-                  Choose reviewer...
-                </option>
-                {reviewers.map((rev) => (
-                  <option key={rev._id} value={rev._id}>
-                    {rev.name} ({rev.email})
-                  </option>
-                ))}
-              </select>
+                onChange={(val) => setSelectedReviewerId(val)}
+                options={reviewers.map((rev) => ({
+                  value: rev._id,
+                  label: rev.name,
+                  sublabel: rev.email,
+                }))}
+                className="w-full"
+              />
             </div>
             <div className="flex justify-end gap-2 pt-2">
               <button

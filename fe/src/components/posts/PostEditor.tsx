@@ -3,6 +3,7 @@ import { Client, Platform, Post } from '../../types';
 import { CAPTION_LIMITS, PLATFORM_CONFIGS } from '../../utils/platformLimits';
 import { toLocalDatetimeInput } from '../../utils/dateUtils';
 import { AlertTriangle, Clock, Calendar, Check, Save } from 'lucide-react';
+import { Dropdown } from '../common/Dropdown';
 
 interface PostEditorProps {
   initialPost?: Post;
@@ -78,8 +79,7 @@ export const PostEditor: React.FC<PostEditorProps> = ({
     onCaptionChange?.(val);
   };
 
-  const handleClientSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const val = e.target.value;
+  const handleClientSelect = (val: string) => {
     setSelectedClient(val);
     onClientChange?.(val);
   };
@@ -120,22 +120,18 @@ export const PostEditor: React.FC<PostEditorProps> = ({
         <label className="block text-xs font-semibold text-slate-700 mb-1.5">
           Client Brand <span className="text-rose-500">*</span>
         </label>
-        <select
+        <Dropdown
+          variant="form"
+          placeholder="Select target client brand"
           value={selectedClient}
           onChange={handleClientSelect}
-          disabled={!!initialPost} // Client brand is immutable after post creation
-          className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-medium text-slate-800 bg-white focus:outline-hidden focus:ring-2 focus:ring-indigo-600 transition disabled:bg-slate-50 disabled:text-slate-400"
-          required
-        >
-          <option value="" disabled>
-            Select target client brand
-          </option>
-          {clients.map((c) => (
-            <option key={c._id} value={c._id}>
-              {c.brandName}
-            </option>
-          ))}
-        </select>
+          disabled={!!initialPost}
+          options={clients.map((c) => ({
+            value: c._id,
+            label: c.brandName,
+          }))}
+          className="w-full"
+        />
       </div>
 
       {/* Target Platform Selector */}
