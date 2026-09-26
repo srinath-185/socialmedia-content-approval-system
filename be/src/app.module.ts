@@ -6,6 +6,7 @@ import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
 import configuration from './config/configuration';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
+import { AuthModule } from './auth/auth.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { TransformInterceptor } from './common/interceptors/transform.intercepto
       inject: [ConfigService],
     }),
     ScheduleModule.forRoot(),
+    AuthModule,
   ],
   providers: [
     {
